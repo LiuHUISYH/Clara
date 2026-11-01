@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ChemLearn：面向 AP 化学学习者的知识讲解、课后练习、错题集与 3D 分子可视化平台，纯前端、无需后端。">
+  <meta name="theme-color" content="#4f7cff">
+  <title>ChemLearn · AP 化学学习与练习平台</title>
+
+  <!-- 内联 SVG 图标，避免额外请求 -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%234f7cff'/%3E%3Ctext x='32' y='43' font-size='34' text-anchor='middle' fill='white' font-family='sans-serif'%3EC%3C/text%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <a class="skip-link" href="#view-root">跳到主要内容</a>
+
+  <!-- ============================ 顶部导航 ============================ -->
+  <header class="site-header" id="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#/home" aria-label="ChemLearn 首页">
+        <span class="brand__mark" aria-hidden="true">C</span>
+        <span class="brand__text">
+          <strong>ChemLearn</strong>
+          <small>AP 化学学习平台</small>
+        </span>
+      </a>
+
+      <button class="nav-toggle" id="nav-toggle" type="button"
+              aria-label="打开导航菜单" aria-expanded="false" aria-controls="main-nav">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="main-nav" id="main-nav" aria-label="主导航">
+        <a href="#/home" data-nav="home">首页</a>
+        <a href="#/chapters" data-nav="chapters">章节学习</a>
+        <a href="#/quiz" data-nav="quiz">练习</a>
+        <a href="#/wrongbook" data-nav="wrongbook">
+          错题集
+          <span class="nav-badge" id="wrong-badge">0</span>
+        </a>
+        <a href="#/molecule" data-nav="molecule" class="nav-highlight">
+          3D 分子
+          <span class="nav-badge nav-badge--soft" id="header-molecules">0</span>
+        </a>
+        <a href="#/tools" data-nav="tools">工具</a>
+      </nav>
+
+      <div class="header-meta">
+        <span class="progress-pill" id="header-progress">已学 0 / 0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================ 主内容区 ============================ -->
+  <main id="view-root" class="container" tabindex="-1">
+    <div class="loading">
+      <div class="loading__spinner" aria-hidden="true"></div>
+      <p>正在加载 ChemLearn 数据…</p>
+    </div>
+  </main>
+
+  <!-- ============================ 页脚 ============================ -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="brand__mark brand__mark--sm" aria-hidden="true">C</span>
+        <div>
+          <strong>ChemLearn</strong>
+          <p>用“讲解 + 练习 + 错题 + 3D”四步，把 AP 化学真正学懂。</p>
+        </div>
+      </div>
+      <div class="footer-links">
+        <a href="#/chapters">章节学习</a>
+        <a href="#/quiz">课后练习</a>
+        <a href="#/wrongbook">错题集</a>
+        <a href="#/molecule">3D 分子</a>
+        <a href="#/tools">辅助工具</a>
+      </div>
+      <div class="footer-meta">
+        <p>纯前端应用 · 数据保存在本机浏览器 · 无需登录</p>
+        <p class="muted">© <span id="footer-year">2026</span> ChemLearn · 教学演示项目</p>
+      </div>
+    </div>
+  </footer>
+
+  <button class="back-top" id="back-top" type="button" aria-label="回到顶部">↑</button>
+
+  <!-- 模态框与提示容器 -->
+  <div id="modal-root"></div>
+  <div id="toast-root" class="toast-root" role="region" aria-live="polite" aria-label="通知"></div>
+
+  <!-- ==================================================================
+       数据包装文件：由 tools/build_data.py 从 data/*.json 生成。
+       作用是把 JSON 挂到 window.CHEM_DATA 上，从而支持直接双击
+       index.html（file:// 协议）运行，避免 fetch 被 CORS 拦截。
+       ================================================================== -->
+  <script src="data/knowledge.js"></script>
+  <script src="data/quiz.js"></script>
+  <script src="data/molecules.js"></script>
+  <script src="data/nameMap.js"></script>
+  <script src="data/equations.js"></script>
+
+  <!-- ============================ 应用脚本 ============================ -->
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/knowledge.js"></script>
+  <script src="js/quiz.js"></script>
+  <script src="js/wrongbook.js"></script>
+  <script src="js/molecule3d.js"></script>
+  <script src="js/tools.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

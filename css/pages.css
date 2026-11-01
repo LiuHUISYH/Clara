@@ -1,0 +1,1236 @@
+/* ==================================================================
+   pages.css —— 各页面专属样式
+   ------------------------------------------------------------------
+   首页 Hero / 学习路径 / 章节页 / 知识点页 / 3D 分子页 / 工具页
+   ================================================================== */
+
+/* ============================ 首页 Hero ============================ */
+
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 2rem;
+  align-items: center;
+  padding: clamp(1.6rem, 3.5vw, 2.8rem);
+  border: 1px solid #dbe6ff;
+  border-radius: 28px;
+  background:
+    radial-gradient(600px 260px at 90% 10%, rgba(139, 92, 246, 0.14), transparent 70%),
+    radial-gradient(500px 260px at 10% 100%, rgba(6, 182, 212, 0.12), transparent 70%),
+    linear-gradient(135deg, #eef4ff, #f8f6ff 55%, #eefaf8);
+  overflow: hidden;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  right: -80px;
+  bottom: -120px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  border: 1px dashed rgba(79, 124, 255, 0.32);
+  pointer-events: none;
+}
+
+.hero__content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero__title {
+  margin: 0.15rem 0 0.7rem;
+  font-size: clamp(1.9rem, 3.6vw, 2.9rem);
+  line-height: 1.28;
+  letter-spacing: -0.02em;
+}
+
+.hero__title span {
+  background: linear-gradient(120deg, var(--accent), #8b5cf6 60%, var(--cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero__desc {
+  max-width: 54ch;
+  margin-bottom: 1.3rem;
+  color: var(--text-2);
+  font-size: 0.98rem;
+  line-height: 1.8;
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-bottom: 1.6rem;
+}
+
+.hero__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.2rem;
+}
+
+.hero__stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.hero__stats strong {
+  font-size: 1.45rem;
+  line-height: 1.1;
+  color: var(--accent-dark);
+}
+
+.hero__stats span {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+/* ---------- Hero 装饰：水分子 ---------- */
+
+.hero__visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.hero-orbit {
+  position: relative;
+  width: min(280px, 100%);
+  aspect-ratio: 1.15 / 1;
+  animation: float 7s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+}
+
+.hero-atom {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: inset -8px -10px 18px rgba(15, 23, 42, 0.22),
+    0 12px 24px rgba(15, 23, 42, 0.18);
+}
+
+.hero-atom--o {
+  left: 50%;
+  top: 40%;
+  width: 96px;
+  height: 96px;
+  margin: -48px 0 0 -48px;
+  background: radial-gradient(circle at 32% 28%, #ff8a8a, #e53838 62%, #a31515);
+}
+
+.hero-atom--h1,
+.hero-atom--h2 {
+  width: 54px;
+  height: 54px;
+  background: radial-gradient(circle at 32% 28%, #ffffff, #e2e8f0 60%, #94a3b8);
+  color: #334155;
+  font-size: 0.8rem;
+}
+
+.hero-atom--h1 {
+  left: 16%;
+  top: 26%;
+}
+
+.hero-atom--h2 {
+  right: 12%;
+  top: 30%;
+}
+
+.hero-bond {
+  position: absolute;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(203, 213, 225, 0.9));
+  transform-origin: left center;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+}
+
+.hero-bond--1 {
+  left: 30%;
+  top: 39%;
+  width: 96px;
+  transform: rotate(-28deg);
+}
+
+.hero-bond--2 {
+  left: 50%;
+  top: 42%;
+  width: 96px;
+  transform: rotate(22deg);
+}
+
+.hero__caption {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+/* ============================ 首页区块 ============================ */
+
+.home-section {
+  margin-top: 2.4rem;
+}
+
+.home-section--split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+
+.home-panel {
+  padding: 1.3rem 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.path-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.path-list li {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.path-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  margin-top: 0.15rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.path-list strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.path-list p {
+  margin: 0.1rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+.home-wrong-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.home-wrong-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.home-wrong-item a {
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.home-wrong-item a:hover {
+  color: var(--accent);
+}
+
+.home-wrong-item .muted {
+  font-size: 0.72rem;
+}
+
+.home-wrong-item--empty {
+  color: var(--muted);
+  font-size: 0.86rem;
+  text-align: center;
+  padding: 1.2rem 0.8rem;
+}
+
+.home-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* ============================ 章节页 ============================ */
+
+.chapter-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.6rem 1.8rem;
+  margin-bottom: 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg,
+      rgba(79, 124, 255, 0.10),
+      rgba(255, 255, 255, 0.92) 55%,
+      rgba(139, 92, 246, 0.06));
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.chapter-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--chapter-color, var(--accent));
+}
+
+.chapter-hero__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  flex: none;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.chapter-hero__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.chapter-hero__index {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--chapter-color, var(--accent));
+}
+
+.chapter-hero__text h1 {
+  margin: 0.1rem 0 0.15rem;
+  font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+}
+
+.chapter-hero__en {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+.chapter-hero__desc {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--text-2);
+  font-size: 0.88rem;
+}
+
+.chapter-hero__progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.chapter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1.6rem;
+  font-size: 0.84rem;
+}
+
+.point-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.point-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+}
+
+.point-row:hover {
+  border-color: rgba(79, 124, 255, 0.35);
+  box-shadow: var(--shadow);
+}
+
+.point-row__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--bg-deep);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.point-row__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.point-row__title {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.point-row__title:hover {
+  color: var(--accent);
+}
+
+.point-row__en {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.point-row__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.point-row__status {
+  flex: none;
+  padding: 0.15em 0.6em;
+  border-radius: 6px;
+  background: var(--bg-deep);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.point-row__status.is-read {
+  background: var(--success-soft);
+  color: #047857;
+}
+
+.chapter-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.6rem;
+  padding-top: 1.2rem;
+  border-top: 1px dashed var(--border);
+}
+
+.pager-link {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.pager-link:hover {
+  color: var(--accent);
+}
+
+.pager-link--next {
+  text-align: right;
+}
+
+/* ============================ 知识点页 ============================ */
+
+.knowledge-head {
+  padding: 1.4rem 1.6rem;
+  margin-bottom: 1.1rem;
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--chapter-color, var(--accent));
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.knowledge-head__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.6rem;
+}
+
+.knowledge-title {
+  margin: 0 0 0.15rem;
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+}
+
+.knowledge-title-en {
+  margin: 0 0 0.6rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  letter-spacing: 0.01em;
+}
+
+.knowledge-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.content-block {
+  padding: 1.35rem 1.6rem;
+  margin-bottom: 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.content-block__title {
+  margin: 0 0 0.8rem;
+  font-size: 1.05rem;
+}
+
+.content-block--definition {
+  border-left: 4px solid var(--accent);
+  background:
+    linear-gradient(135deg, rgba(79, 124, 255, 0.06), rgba(255, 255, 255, 0.9));
+}
+
+.definition-cn {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+  line-height: 1.85;
+  color: var(--text);
+}
+
+.definition-en {
+  margin: 0;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  font-style: italic;
+}
+
+.prose {
+  color: var(--text-2);
+}
+
+.prose__paragraph {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.95;
+  text-align: justify;
+}
+
+.prose__paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.prose__paragraph::first-letter {
+  font-weight: 700;
+  color: var(--accent-dark);
+}
+
+.example-card {
+  padding: 1rem 1.15rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.example-card:last-child {
+  margin-bottom: 0;
+}
+
+.example-card__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  color: var(--accent-dark);
+}
+
+.example-card__content {
+  margin: 0 0 0.6rem;
+  font-size: 0.88rem;
+  color: var(--text-2);
+}
+
+.example-card__steps {
+  counter-reset: step;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.example-card__steps li {
+  position: relative;
+  padding-left: 1.9rem;
+  font-size: 0.86rem;
+  line-height: 1.8;
+  color: var(--text-2);
+}
+
+.example-card__steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.content-block--pitfalls {
+  border-left: 4px solid var(--warn);
+  background:
+    linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(255, 255, 255, 0.92));
+}
+
+.pitfall-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pitfall-item {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.08);
+  font-size: 0.88rem;
+  line-height: 1.72;
+  color: #78350f;
+}
+
+.pitfall-item__icon {
+  flex: none;
+  line-height: 1.3;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.7rem;
+}
+
+.summary-card {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(79, 124, 255, 0.05), rgba(255, 255, 255, 0.9));
+}
+
+.summary-card__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.summary-card p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+
+.knowledge-footer {
+  margin-top: 1.2rem;
+}
+
+.knowledge-footer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px dashed var(--border);
+}
+
+.knowledge-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+}
+
+/* ============================ 3D 分子页 ============================ */
+
+.molecule-search {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+}
+
+.molecule-search__field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.molecule-search__field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.molecule-search__icon {
+  font-size: 1rem;
+  opacity: 0.7;
+}
+
+.molecule-search__field input {
+  flex: 1;
+  padding: 0.55em 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.molecule-search__field input:focus {
+  box-shadow: none;
+}
+
+.molecule-search .btn {
+  flex: none;
+}
+
+.molecule-stage {
+  min-width: 0;
+}
+
+.canvas-wrap {
+  position: relative;
+  height: clamp(420px, 56vh, 600px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #ffffff, #f1f5f9);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  touch-action: none;
+}
+
+#molecule-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+#molecule-canvas.is-grabbing {
+  cursor: grabbing;
+}
+
+.canvas-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 0.28em 0.75em;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-2);
+  font-size: 0.74rem;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.canvas-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.canvas-hint {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  padding: 0.22em 0.7em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--muted);
+  font-size: 0.7rem;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.atom-tooltip {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-width: 190px;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+}
+
+.atom-tooltip__dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 0.35rem;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.atom-tooltip__coord {
+  color: rgba(226, 232, 240, 0.82);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.molecule-notice {
+  margin-top: 0.9rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.84rem;
+  line-height: 1.7;
+}
+
+.molecule-notice strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--text);
+}
+
+.molecule-notice p {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.molecule-notice--info {
+  border-left-color: var(--accent);
+  background: rgba(79, 124, 255, 0.04);
+}
+
+.molecule-notice--warn {
+  border-left-color: var(--warn);
+  background: rgba(245, 158, 11, 0.07);
+}
+
+.molecule-notice--error {
+  border-left-color: var(--danger);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.molecule-panel {
+  position: sticky;
+  top: calc(var(--header-height) + 16px);
+  min-width: 0;
+}
+
+.panel-card {
+  padding: 1.3rem 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-title {
+  margin: 0.1rem 0 0.5rem;
+  font-size: 1.3rem;
+}
+
+.panel-title__formula {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.panel-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.panel-stats {
+  display: flex;
+  gap: 1.6rem;
+  padding: 0.7rem 0;
+  margin-top: 0.4rem;
+  border-top: 1px dashed var(--border);
+}
+
+.panel-stats div {
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-stats strong {
+  font-size: 1.15rem;
+}
+
+.panel-stats span {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.panel-note {
+  margin: 0.6rem 0 0;
+  color: var(--text-2);
+  font-size: 0.84rem;
+  line-height: 1.75;
+}
+
+.panel-warn {
+  margin-top: 0.7rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  color: #92400e;
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
+.panel-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+/* ============================ 404 ============================ */
+
+.page--notfound .empty-state {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+
+.page--notfound code {
+  font-size: 0.82rem;
+}
+
+/* ============================ 页面级响应式 ============================ */
+
+@media (max-width: 1080px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero__visual {
+    display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .session-body {
+    grid-template-columns: 1fr;
+  }
+
+  .palette {
+    position: static;
+  }
+
+  .palette__grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  .molecule-panel {
+    position: static;
+  }
+
+  .home-section--split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .chapter-hero {
+    flex-wrap: wrap;
+  }
+
+  .chapter-hero__progress {
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.8rem;
+  }
+
+  .stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .result-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .hero {
+    padding: 1.5rem 1.3rem;
+    border-radius: 20px;
+  }
+
+  .hero__stats {
+    gap: 1.4rem;
+  }
+
+  .result-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.3rem;
+  }
+
+  .result-ring .ring {
+    width: 96px;
+    height: 96px;
+  }
+
+  .tool-form {
+    flex-direction: column;
+  }
+
+  .tool-form .btn {
+    width: 100%;
+  }
+
+  .molecule-search {
+    flex-direction: column;
+  }
+
+  .molecule-search .btn {
+    width: 100%;
+  }
+
+  .canvas-wrap {
+    height: 420px;
+    border-radius: var(--radius);
+  }
+
+  .canvas-hint {
+    display: none;
+  }
+
+  .point-row {
+    flex-wrap: wrap;
+  }
+
+  .point-row__main {
+    flex: 1 1 100%;
+    order: 2;
+  }
+
+  .point-row__status {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .point-row .btn {
+    order: 3;
+  }
+
+  .knowledge-head,
+  .content-block {
+    padding: 1.1rem 1.15rem;
+  }
+
+  .prose__paragraph {
+    text-align: left;
+  }
+
+  .chapter-pager,
+  .knowledge-pager {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .pager-link--next {
+    text-align: left;
+  }
+
+  .palette__grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .session-head {
+    align-items: flex-start;
+  }
+
+  .session-head__right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .question-card {
+    padding: 1.1rem;
+  }
+
+  .question-card__stem {
+    font-size: 1rem;
+  }
+
+  .result-head__text h1 {
+    font-size: 1.15rem;
+  }
+
+  .identify-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-bar {
+    align-items: stretch;
+  }
+
+  .select-wrap,
+  .select-wrap .select {
+    width: 100%;
+  }
+
+  .segmented {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .segmented__btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 520px) {
+  .hero__actions .btn {
+    width: 100%;
+  }
+
+  .hero__stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .stat-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .result-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .session-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .session-nav__right {
+    flex-direction: column;
+  }
+
+  .session-nav .btn {
+    width: 100%;
+  }
+
+  .palette__grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .property-row {
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .property-row dt {
+    width: auto;
+    font-size: 0.76rem;
+  }
+
+  .toast-root {
+    bottom: 16px;
+  }
+}

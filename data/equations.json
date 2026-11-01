@@ -1,0 +1,414 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "description": "配平助手内置题库：未配平方程式 + 标准答案 + 分步推导",
+    "count": 18
+  },
+  "equations": [
+    {
+      "id": "eq-001",
+      "equation": "H2 + O2 → H2O",
+      "balanced": "2H2 + O2 → 2H2O",
+      "type": "化合反应",
+      "difficulty": "入门",
+      "reactants": [
+        { "formula": "H2", "coefficient": 2 },
+        { "formula": "O2", "coefficient": 1 }
+      ],
+      "products": [
+        { "formula": "H2O", "coefficient": 2 }
+      ],
+      "steps": [
+        "先看氢：左边 H2 有 2 个 H，右边 H2O 也有 2 个 H，暂时看起来已平衡。",
+        "再看氧：左边 O2 有 2 个 O，右边 H2O 只有 1 个 O，所以先在 H2O 前配 2。",
+        "把 H2O 的系数改为 2 后，右边共有 2×2 = 4 个 H，于是左边 H2 前配 2。",
+        "复查：左边 H = 2×2 = 4，O = 2；右边 H = 2×2 = 4，O = 2×1 = 2，两边相等。",
+        "最终答案：2H2 + O2 → 2H2O。"
+      ],
+      "note": "配平顺序建议：先配单质，再配化合物；氧原子通常留到最后处理。"
+    },
+    {
+      "id": "eq-002",
+      "equation": "CH4 + O2 → CO2 + H2O",
+      "balanced": "CH4 + 2O2 → CO2 + 2H2O",
+      "type": "燃烧反应",
+      "difficulty": "入门",
+      "reactants": [
+        { "formula": "CH4", "coefficient": 1 },
+        { "formula": "O2", "coefficient": 2 }
+      ],
+      "products": [
+        { "formula": "CO2", "coefficient": 1 },
+        { "formula": "H2O", "coefficient": 2 }
+      ],
+      "steps": [
+        "先配碳：左边 CH4 有 1 个 C，右边 CO2 有 1 个 C，碳已平衡。",
+        "再配氢：左边 4 个 H，右边 H2O 只有 2 个 H，故 H2O 前配 2。",
+        "最后配氧：右边共有 2（CO2）+ 2（H2O）= 4 个 O，左边 O2 提供 2 个 O，故 O2 前配 2。",
+        "复查：C = 1，H = 4，O = 4，两边一致。",
+        "最终答案：CH4 + 2O2 → CO2 + 2H2O。"
+      ],
+      "note": "含 C、H 的燃料完全燃烧时，产物一定是 CO2 与 H2O。"
+    },
+    {
+      "id": "eq-003",
+      "equation": "Fe + O2 → Fe2O3",
+      "balanced": "4Fe + 3O2 → 2Fe2O3",
+      "type": "化合反应",
+      "difficulty": "基础",
+      "reactants": [
+        { "formula": "Fe", "coefficient": 4 },
+        { "formula": "O2", "coefficient": 3 }
+      ],
+      "products": [
+        { "formula": "Fe2O3", "coefficient": 2 }
+      ],
+      "steps": [
+        "观察 Fe2O3：每个分子含 2 个 Fe、3 个 O，所以先设 Fe2O3 的系数为 2，得到 4 个 Fe 与 6 个 O。",
+        "为提供 4 个 Fe，左边 Fe 前配 4。",
+        "为提供 6 个 O，左边 O2 前配 3（3×2 = 6）。",
+        "复查：Fe = 4，O = 6，两边一致。",
+        "最终答案：4Fe + 3O2 → 2Fe2O3。"
+      ],
+      "note": "当化合物中元素个数为奇数时，可以先取 2 倍使其变为偶数，再进行配平。"
+    },
+    {
+      "id": "eq-004",
+      "equation": "KClO3 → KCl + O2",
+      "balanced": "2KClO3 → 2KCl + 3O2",
+      "type": "分解反应",
+      "difficulty": "基础",
+      "reactants": [
+        { "formula": "KClO3", "coefficient": 2 }
+      ],
+      "products": [
+        { "formula": "KCl", "coefficient": 2 },
+        { "formula": "O2", "coefficient": 3 }
+      ],
+      "steps": [
+        "先配氧：左边每个 KClO3 有 3 个 O，右边 O2 每分子有 2 个 O。",
+        "3 与 2 的最小公倍数是 6：KClO3 前配 2（共 6 个 O），O2 前配 3（共 6 个 O）。",
+        "此时左边有 2 个 K 与 2 个 Cl，因此 KCl 前配 2。",
+        "复查：K = 2，Cl = 2，O = 6，两边一致。",
+        "最终答案：2KClO3 → 2KCl + 3O2。"
+      ],
+      "note": "这是实验室制氧气的经典反应，MnO2 作催化剂可加快分解速率。"
+    },
+    {
+      "id": "eq-005",
+      "equation": "N2 + H2 → NH3",
+      "balanced": "N2 + 3H2 → 2NH3",
+      "type": "化合反应",
+      "difficulty": "基础",
+      "reactants": [
+        { "formula": "N2", "coefficient": 1 },
+        { "formula": "H2", "coefficient": 3 }
+      ],
+      "products": [
+        { "formula": "NH3", "coefficient": 2 }
+      ],
+      "steps": [
+        "先配氮：左边 N2 有 2 个 N，右边 NH3 只有 1 个 N，故 NH3 前配 2。",
+        "此时右边共有 2×3 = 6 个 H，因此左边 H2 前配 3。",
+        "复查：N = 2，H = 6，两边一致。",
+        "最终答案：N2 + 3H2 → 2NH3。"
+      ],
+      "note": "工业合成氨（哈伯法）的反应，条件为高温高压与催化剂。"
+    },
+    {
+      "id": "eq-006",
+      "equation": "Al + HCl → AlCl3 + H2",
+      "balanced": "2Al + 6HCl → 2AlCl3 + 3H2",
+      "type": "置换反应",
+      "difficulty": "基础",
+      "reactants": [
+        { "formula": "Al", "coefficient": 2 },
+        { "formula": "HCl", "coefficient": 6 }
+      ],
+      "products": [
+        { "formula": "AlCl3", "coefficient": 2 },
+        { "formula": "H2", "coefficient": 3 }
+      ],
+      "steps": [
+        "先配铝：AlCl3 含 1 个 Al，左边 Al 也是 1 个，暂时相等。",
+        "再看氢：右边 H2 有 2 个 H，左边 HCl 只有 1 个，若 H2 取 3 则有 6 个 H。",
+        "取 H2 系数为 3 后，右边 Cl 为 2×3 = 6（若 AlCl3 取 2），于是 HCl 前配 6。",
+        "AlCl3 取 2 后，左边 Al 需配 2。",
+        "复查：Al = 2，H = 6，Cl = 6，两边一致。",
+        "最终答案：2Al + 6HCl → 2AlCl3 + 3H2。"
+      ],
+      "note": "活泼金属与酸反应放出氢气，铝在常温下会先被氧化膜钝化。"
+    },
+    {
+      "id": "eq-007",
+      "equation": "CaCO3 → CaO + CO2",
+      "balanced": "CaCO3 → CaO + CO2",
+      "type": "分解反应",
+      "difficulty": "入门",
+      "reactants": [
+        { "formula": "CaCO3", "coefficient": 1 }
+      ],
+      "products": [
+        { "formula": "CaO", "coefficient": 1 },
+        { "formula": "CO2", "coefficient": 1 }
+      ],
+      "steps": [
+        "统计左边：Ca = 1，C = 1，O = 3。",
+        "统计右边：CaO 提供 Ca = 1、O = 1；CO2 提供 C = 1、O = 2。",
+        "右边合计 Ca = 1，C = 1，O = 3，与左边完全相等。",
+        "所有系数均为 1，因此该式本来就已经配平。",
+        "最终答案：CaCO3 → CaO + CO2。"
+      ],
+      "note": "工业煅烧石灰石制生石灰的反应，注意它并非“没配平”，而是系数全为 1。"
+    },
+    {
+      "id": "eq-008",
+      "equation": "Na + Cl2 → NaCl",
+      "balanced": "2Na + Cl2 → 2NaCl",
+      "type": "化合反应",
+      "difficulty": "入门",
+      "reactants": [
+        { "formula": "Na", "coefficient": 2 },
+        { "formula": "Cl2", "coefficient": 1 }
+      ],
+      "products": [
+        { "formula": "NaCl", "coefficient": 2 }
+      ],
+      "steps": [
+        "先配氯：左边 Cl2 有 2 个 Cl，右边 NaCl 只有 1 个，故 NaCl 前配 2。",
+        "此时右边有 2 个 Na，因此左边 Na 前配 2。",
+        "复查：Na = 2，Cl = 2，两边一致。",
+        "最终答案：2Na + Cl2 → 2NaCl。"
+      ],
+      "note": "钠在氯气中燃烧发出黄色火焰，生成白色固体食盐。"
+    },
+    {
+      "id": "eq-009",
+      "equation": "Mg + HCl → MgCl2 + H2",
+      "balanced": "Mg + 2HCl → MgCl2 + H2",
+      "type": "置换反应",
+      "difficulty": "入门",
+      "reactants": [
+        { "formula": "Mg", "coefficient": 1 },
+        { "formula": "HCl", "coefficient": 2 }
+      ],
+      "products": [
+        { "formula": "MgCl2", "coefficient": 1 },
+        { "formula": "H2", "coefficient": 1 }
+      ],
+      "steps": [
+        "先配氯：右边 MgCl2 有 2 个 Cl，左边 HCl 只有 1 个，故 HCl 前配 2。",
+        "再看氢：左边 2 个 H，右边 H2 恰好 2 个 H，已平衡。",
+        "镁：左右各 1 个，已平衡。",
+        "复查：Mg = 1，Cl = 2，H = 2，两边一致。",
+        "最终答案：Mg + 2HCl → MgCl2 + H2。"
+      ],
+      "note": "镁与盐酸反应比铝更剧烈，可用于比较金属活动性。"
+    },
+    {
+      "id": "eq-010",
+      "equation": "C3H8 + O2 → CO2 + H2O",
+      "balanced": "C3H8 + 5O2 → 3CO2 + 4H2O",
+      "type": "燃烧反应",
+      "difficulty": "进阶",
+      "reactants": [
+        { "formula": "C3H8", "coefficient": 1 },
+        { "formula": "O2", "coefficient": 5 }
+      ],
+      "products": [
+        { "formula": "CO2", "coefficient": 3 },
+        { "formula": "H2O", "coefficient": 4 }
+      ],
+      "steps": [
+        "先配碳：C3H8 有 3 个 C，故 CO2 前配 3。",
+        "再配氢：C3H8 有 8 个 H，故 H2O 前配 4。",
+        "最后配氧：右边 O = 3×2 + 4×1 = 10，左边 O2 每分子提供 2 个 O，故配 5。",
+        "复查：C = 3，H = 8，O = 10，两边一致。",
+        "最终答案：C3H8 + 5O2 → 3CO2 + 4H2O。"
+      ],
+      "note": "烃类完全燃烧的通式：CxHy + (x + y/4)O2 → xCO2 + (y/2)H2O。"
+    },
+    {
+      "id": "eq-011",
+      "equation": "NaOH + H2SO4 → Na2SO4 + H2O",
+      "balanced": "2NaOH + H2SO4 → Na2SO4 + 2H2O",
+      "type": "中和反应",
+      "difficulty": "基础",
+      "reactants": [
+        { "formula": "NaOH", "coefficient": 2 },
+        { "formula": "H2SO4", "coefficient": 1 }
+      ],
+      "products": [
+        { "formula": "Na2SO4", "coefficient": 1 },
+        { "formula": "H2O", "coefficient": 2 }
+      ],
+      "steps": [
+        "先配钠：右边 Na2SO4 有 2 个 Na，左边 NaOH 只有 1 个，故 NaOH 前配 2。",
+        "此时左边共有 4 个 H（2 个来自 NaOH 的 OH，2 个来自 H2SO4），故 H2O 前配 2。",
+        "复查硫酸根：左边 1 个 SO4，右边 1 个 SO4，已平衡。",
+        "复查：Na = 2，H = 4，S = 1，O = 2+4 = 6；右边 O = 4+2 = 6，完全一致。",
+        "最终答案：2NaOH + H2SO4 → Na2SO4 + 2H2O。"
+      ],
+      "note": "中和反应的实质是 H⁺ + OH⁻ → H2O，盐的系数需由离子配比决定。"
+    },
+    {
+      "id": "eq-012",
+      "equation": "AgNO3 + NaCl → AgCl + NaNO3",
+      "balanced": "AgNO3 + NaCl → AgCl↓ + NaNO3",
+      "type": "复分解反应",
+      "difficulty": "入门",
+      "reactants": [
+        { "formula": "AgNO3", "coefficient": 1 },
+        { "formula": "NaCl", "coefficient": 1 }
+      ],
+      "products": [
+        { "formula": "AgCl", "coefficient": 1 },
+        { "formula": "NaNO3", "coefficient": 1 }
+      ],
+      "steps": [
+        "把 AgNO3 与 NaCl 看作离子：Ag⁺、NO3⁻、Na⁺、Cl⁻。",
+        "交换成分后生成 AgCl 与 NaNO3。",
+        "统计每种元素：Ag = 1，N = 1，O = 3，Na = 1，Cl = 1，两边完全相等。",
+        "因此所有系数均为 1，AgCl 为难溶物，习惯标注“↓”。",
+        "最终答案：AgNO3 + NaCl → AgCl↓ + NaNO3。"
+      ],
+      "note": "这是检验 Cl⁻ 的经典反应，白色沉淀不溶于稀硝酸。"
+    },
+    {
+      "id": "eq-013",
+      "equation": "Cu + AgNO3 → Cu(NO3)2 + Ag",
+      "balanced": "Cu + 2AgNO3 → Cu(NO3)2 + 2Ag",
+      "type": "置换反应",
+      "difficulty": "基础",
+      "reactants": [
+        { "formula": "Cu", "coefficient": 1 },
+        { "formula": "AgNO3", "coefficient": 2 }
+      ],
+      "products": [
+        { "formula": "Cu(NO3)2", "coefficient": 1 },
+        { "formula": "Ag", "coefficient": 2 }
+      ],
+      "steps": [
+        "先配银：右边 Ag 是单质，左边 AgNO3 提供 1 个 Ag；若 Ag 前配 2，则 AgNO3 前也要配 2。",
+        "此时左边有 2 个 NO3⁻，正好对应右边 Cu(NO3)2 中的 2 个硝酸根。",
+        "铜：左边 1 个 Cu，右边 1 个 Cu，已平衡。",
+        "复查：Cu = 1，Ag = 2，N = 2，O = 6，两边一致。",
+        "最终答案：Cu + 2AgNO3 → Cu(NO3)2 + 2Ag。"
+      ],
+      "note": "铜丝插入硝酸银溶液会析出银白色银树，溶液逐渐变蓝（Cu²⁺）。"
+    },
+    {
+      "id": "eq-014",
+      "equation": "Fe + HCl → FeCl2 + H2",
+      "balanced": "Fe + 2HCl → FeCl2 + H2",
+      "type": "置换反应",
+      "difficulty": "入门",
+      "reactants": [
+        { "formula": "Fe", "coefficient": 1 },
+        { "formula": "HCl", "coefficient": 2 }
+      ],
+      "products": [
+        { "formula": "FeCl2", "coefficient": 1 },
+        { "formula": "H2", "coefficient": 1 }
+      ],
+      "steps": [
+        "先配氯：右边 FeCl2 有 2 个 Cl，左边 HCl 只有 1 个，故 HCl 前配 2。",
+        "氢：左边 2 个 H，右边 H2 有 2 个 H，已平衡。",
+        "铁：左右各 1 个，已平衡。",
+        "复查：Fe = 1，Cl = 2，H = 2，两边一致。",
+        "最终答案：Fe + 2HCl → FeCl2 + H2。"
+      ],
+      "note": "铁与盐酸反应生成的是 Fe²⁺（浅绿色），不是 Fe³⁺；铁与氯气反应才生成 FeCl3。"
+    },
+    {
+      "id": "eq-015",
+      "equation": "H2O2 → H2O + O2",
+      "balanced": "2H2O2 → 2H2O + O2",
+      "type": "分解反应",
+      "difficulty": "基础",
+      "reactants": [
+        { "formula": "H2O2", "coefficient": 2 }
+      ],
+      "products": [
+        { "formula": "H2O", "coefficient": 2 },
+        { "formula": "O2", "coefficient": 1 }
+      ],
+      "steps": [
+        "先配氧：左边每个 H2O2 有 2 个 O，右边 H2O 有 1 个 O、O2 有 2 个 O。",
+        "为保证氧为偶数，取 H2O2 系数为 2，则左边有 4 个 O。",
+        "若 H2O 前配 2（2 个 O），剩余 2 个 O 正好由 1 个 O2 提供。",
+        "复查氢：左边 2×2 = 4 个 H，右边 2×2 = 4 个 H，一致。",
+        "最终答案：2H2O2 → 2H2O + O2。"
+      ],
+      "note": "MnO2 或过氧化氢酶可催化该分解，实验室常用它制取氧气。"
+    },
+    {
+      "id": "eq-016",
+      "equation": "P4 + O2 → P4O10",
+      "balanced": "P4 + 5O2 → P4O10",
+      "type": "化合反应",
+      "difficulty": "基础",
+      "reactants": [
+        { "formula": "P4", "coefficient": 1 },
+        { "formula": "O2", "coefficient": 5 }
+      ],
+      "products": [
+        { "formula": "P4O10", "coefficient": 1 }
+      ],
+      "steps": [
+        "磷：左边 P4 有 4 个 P，右边 P4O10 也有 4 个 P，磷已平衡。",
+        "氧：右边有 10 个 O，左边 O2 每分子提供 2 个 O，因此 O2 前配 5。",
+        "复查：P = 4，O = 10，两边一致。",
+        "最终答案：P4 + 5O2 → P4O10。"
+      ],
+      "note": "白磷在空气中自燃产生大量白烟（P4O10 固体小颗粒）。"
+    },
+    {
+      "id": "eq-017",
+      "equation": "C2H6 + O2 → CO2 + H2O",
+      "balanced": "2C2H6 + 7O2 → 4CO2 + 6H2O",
+      "type": "燃烧反应",
+      "difficulty": "进阶",
+      "reactants": [
+        { "formula": "C2H6", "coefficient": 2 },
+        { "formula": "O2", "coefficient": 7 }
+      ],
+      "products": [
+        { "formula": "CO2", "coefficient": 4 },
+        { "formula": "H2O", "coefficient": 6 }
+      ],
+      "steps": [
+        "直接配平会出现分数：1 个 C2H6 需要 3.5 个 O2，因此先把 C2H6 系数取 2。",
+        "取 2C2H6 后共有 4 个 C，因此 CO2 前配 4。",
+        "共有 12 个 H，因此 H2O 前配 6。",
+        "右边 O = 4×2 + 6×1 = 14，故左边 O2 前配 7。",
+        "复查：C = 4，H = 12，O = 14，两边一致。最终答案：2C2H6 + 7O2 → 4CO2 + 6H2O。"
+      ],
+      "note": "遇到分数系数时，全式同乘分母即可化为最小整数比。"
+    },
+    {
+      "id": "eq-018",
+      "equation": "Na2CO3 + HCl → NaCl + H2O + CO2",
+      "balanced": "Na2CO3 + 2HCl → 2NaCl + H2O + CO2",
+      "type": "复分解反应",
+      "difficulty": "基础",
+      "reactants": [
+        { "formula": "Na2CO3", "coefficient": 1 },
+        { "formula": "HCl", "coefficient": 2 }
+      ],
+      "products": [
+        { "formula": "NaCl", "coefficient": 2 },
+        { "formula": "H2O", "coefficient": 1 },
+        { "formula": "CO2", "coefficient": 1 }
+      ],
+      "steps": [
+        "先配钠：左边 Na2CO3 有 2 个 Na，故 NaCl 前配 2。",
+        "此时右边有 2 个 Cl，因此 HCl 前配 2。",
+        "碳：左右各 1 个，已平衡。",
+        "氧：左边 3 个 O，右边 H2O 有 1 个、CO2 有 2 个，共 3 个，一致。",
+        "氢：左边 2 个 H，右边 H2O 有 2 个，一致。最终答案：Na2CO3 + 2HCl → 2NaCl + H2O + CO2↑。"
+      ],
+      "note": "实验室制取 CO2 的常用反应，会产生大量气泡。"
+    }
+  ]
+}
