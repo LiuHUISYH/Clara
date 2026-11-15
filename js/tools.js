@@ -35,9 +35,8 @@
       '<header class="page-head">' +
       '<div class="page-head__text">' +
       '<h1 class="page-title">辅助工具</h1>' +
-      '<p class="page-subtitle">三个轻量小工具，帮助你在练习中快速检查配平、识别物质类别与计算摩尔质量。</p>' +
+      '<p class="page-subtitle">配平、识别与摩尔质量计算 · 全部在本地运行</p>' +
       '</div>' +
-      '<div class="page-head__extra"><span class="chip chip--soft">全部在本地运行</span></div>' +
       '</header>' +
       '<nav class="tabs" role="tablist" aria-label="工具切换">' +
       TABS.map(function (tab) {
@@ -305,23 +304,23 @@
 
     panel.innerHTML =
       '<div class="tool-card">' +
-      '<h2 class="tool-card__title">方程式配平助手</h2>' +
-      '<p class="tool-card__desc">输入未配平的化学方程式，工具会用线性代数方法求出最简整数系数，并给出配平步骤与验算表。支持 “->”“→”“=” 三种箭头写法。</p>' +
+      '<h2 class="tool-card__title">方程式配平</h2>' +
+      '<p class="tool-card__desc">输入未配平方程式，求出最简整数系数并给出验算与步骤。支持 “->”“→”“=” 三种写法。</p>' +
       '<form class="tool-form" id="balance-form" autocomplete="off">' +
       '<input id="balance-input" class="tool-input" type="text" placeholder="例如：Fe + O2 -> Fe2O3" value="H2 + O2 -> H2O" aria-label="输入未配平方程式">' +
-      '<button class="btn btn--primary" type="submit">开始配平</button>' +
+      '<button class="btn btn--primary" type="submit">配平</button>' +
       '</form>' +
-      '<div class="suggest-row"><span class="suggest-row__label">试试：</span>' +
+      '<div class="suggest-row"><span class="suggest-row__label">示例</span>' +
       ['CH4 + O2 -> CO2 + H2O', 'Fe + O2 -> Fe2O3', 'C3H8 + O2 -> CO2 + H2O', 'NaOH + H2SO4 -> Na2SO4 + H2O'].map(function (text) {
-        return '<button type="button" class="chip chip--btn" data-equation="' + U.escapeHtml(text) + '">' +
+        return '<button type="button" class="chip" data-equation="' + U.escapeHtml(text) + '">' +
           U.escapeHtml(text) + '</button>';
       }).join('') +
       '</div>' +
       '<div id="balance-result" class="tool-result" aria-live="polite"></div>' +
       '</div>' +
 
-      '<div class="tool-card tool-card--library">' +
-      '<h3 class="tool-card__title">内置例题（' + library.length + ' 组，含分步解析）</h3>' +
+      '<details class="tool-library">' +
+      '<summary>内置例题（' + library.length + ' 组）</summary>' +
       '<div class="equation-list">' +
       library.map(function (item) {
         return '<button type="button" class="equation-item" data-library="' + item.id + '">' +
@@ -330,7 +329,7 @@
           '</button>';
       }).join('') +
       '</div>' +
-      '</div>';
+      '</details>';
 
     // 表单提交
     var form = U.$('#balance-form');
@@ -377,15 +376,10 @@
         var balanced = result.before[element] === result.after[element];
         return '<tr><td>' + element + '</td><td>' + result.before[element] + '</td><td>' +
           result.after[element] + '</td><td>' +
-          (balanced ? '<span class="text-success">✓ 守恒</span>' : '<span class="text-danger">✕ 不守恒</span>') +
+          (balanced ? '<span class="text-success">守恒</span>' : '<span class="text-danger">不守恒</span>') +
           '</td></tr>';
       }).join('') +
       '</tbody></table>';
-
-    var coefficientChips = result.species.map(function (formula, index) {
-      return '<span class="coef-chip"><strong>' + result.coefficients[index] + '</strong>' +
-        U.escapeHtml(formula) + '</span>';
-    }).join('');
 
     var steps;
     if (result.library && result.library.steps) {
@@ -423,7 +417,6 @@
       '<div class="balance-answer">' +
       '<span class="eyebrow">配平结果</span>' +
       '<p class="balance-equation">' + U.escapeHtml(result.equation) + '</p>' +
-      '<div class="coef-row">' + coefficientChips + '</div>' +
       '</div>' +
       '<div class="result-grid">' +
       '<div class="result-block"><h4>元素守恒验算</h4>' + table + '</div>' +
@@ -568,24 +561,22 @@
 
     panel.innerHTML =
       '<div class="tool-card">' +
-      '<h2 class="tool-card__title">物质识别小工具</h2>' +
-      '<p class="tool-card__desc">输入物质名称或化学式，快速判断它属于离子化合物、共价化合物还是单质，并给出键型、极性、分子间作用力与结构说明。</p>' +
+      '<h2 class="tool-card__title">物质识别</h2>' +
+      '<p class="tool-card__desc">输入名称或化学式，判断物质类别、键型、极性、分子间作用力与空间结构。</p>' +
       '<form class="tool-form" id="identify-form" autocomplete="off">' +
       '<input id="identify-input" class="tool-input" type="text" placeholder="例如：食盐、CO2、NH3、MgO" value="水" aria-label="输入物质名称或化学式">' +
       '<button class="btn btn--primary" type="submit">识别</button>' +
       '</form>' +
-      '<div class="suggest-row"><span class="suggest-row__label">试试：</span>' +
+      '<div class="suggest-row"><span class="suggest-row__label">示例</span>' +
       ['水', '食盐', '干冰', '氨气', '金刚石', 'MgO', '乙醇'].map(function (name) {
-        return '<button type="button" class="chip chip--btn" data-name="' + U.escapeHtml(name) + '">' +
+        return '<button type="button" class="chip" data-name="' + U.escapeHtml(name) + '">' +
           U.escapeHtml(name) + '</button>';
       }).join('') +
       '</div>' +
       '<div id="identify-result" class="tool-result" aria-live="polite"></div>' +
       '</div>' +
-      '<div class="tool-note tool-note--standalone">' +
-      '<strong>使用提示：</strong>“相似相溶”、键的极性、分子几何与分子间作用力是相互关联的判断链条。' +
-      '识别结果可以帮助你快速建立这条链条，但考试时仍需要写出推理过程。' +
-      '</div>';
+      '<p class="page-note">使用提示：“相似相溶”、键的极性、分子几何与分子间作用力是相互关联的判断链条。' +
+      '工具用于快速核对，考试时仍需写出推理过程。</p>';
 
     var form = U.$('#identify-form');
     form.addEventListener('submit', function (event) {
@@ -631,7 +622,7 @@
       '<h3 class="identify-title">' + U.escapeHtml(result.name) +
       '<span class="identify-formula">' + U.escapeHtml(result.formula) + '</span></h3>' +
       '</div>' +
-      '<a class="btn btn--ghost btn--sm" href="#/molecule/' + encodeURIComponent(result.formula) + '">查看 3D 结构</a>' +
+      '<a class="text-link" href="#/molecule/' + encodeURIComponent(result.formula) + '">查看 3D 结构 →</a>' +
       '</div>' +
       '<dl class="property-list property-list--wide">' +
       rows.map(function (row) {
@@ -732,24 +723,22 @@
 
     panel.innerHTML =
       '<div class="tool-card">' +
-      '<h2 class="tool-card__title">摩尔质量计算器</h2>' +
-      '<p class="tool-card__desc">输入化学式，计算摩尔质量并查看各元素的质量贡献。支持括号与结晶水，例如 Ca(OH)2、CuSO4·5H2O。</p>' +
+      '<h2 class="tool-card__title">摩尔质量</h2>' +
+      '<p class="tool-card__desc">输入化学式，计算摩尔质量并查看各元素的质量贡献。支持括号与结晶水。</p>' +
       '<form class="tool-form" id="molar-form" autocomplete="off">' +
       '<input id="molar-input" class="tool-input" type="text" placeholder="例如：CuSO4·5H2O" value="H2O" aria-label="输入化学式">' +
       '<button class="btn btn--primary" type="submit">计算</button>' +
       '</form>' +
-      '<div class="suggest-row"><span class="suggest-row__label">试试：</span>' +
+      '<div class="suggest-row"><span class="suggest-row__label">示例</span>' +
       ['H2O', 'NaCl', 'Ca(OH)2', 'CuSO4·5H2O', 'C6H12O6', 'NH4NO3'].map(function (formula) {
-        return '<button type="button" class="chip chip--btn" data-formula="' + U.escapeHtml(formula) + '">' +
+        return '<button type="button" class="chip" data-formula="' + U.escapeHtml(formula) + '">' +
           U.escapeHtml(formula) + '</button>';
       }).join('') +
       '</div>' +
       '<div id="molar-result" class="tool-result" aria-live="polite"></div>' +
       '</div>' +
-      '<div class="tool-note tool-note--standalone">' +
-      '<strong>复习提示：</strong>摩尔质量 M 在数值上等于相对分子质量，单位是 g/mol。' +
-      '计算物质的量时使用 n = m / M；配制溶液时再结合 M = n / V 求浓度。' +
-      '</div>';
+      '<p class="page-note">复习提示：摩尔质量 M 在数值上等于相对分子质量，单位是 g/mol。' +
+      '计算物质的量时使用 n = m / M。</p>';
 
     var form = U.$('#molar-form');
     form.addEventListener('submit', function (event) {

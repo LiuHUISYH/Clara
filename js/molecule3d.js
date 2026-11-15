@@ -336,31 +336,27 @@
   /** 渲染 3D 分子页面 */
   function render(params) {
     var root = U.$('#view-root');
-    var stats = CL.data.stats();
 
     root.innerHTML =
       '<section class="page page--molecule">' +
-      '<header class="page-head">' +
-      '<div class="page-head__text">' +
-      '<h1 class="page-title">3D 分子可视化</h1>' +
-      '<p class="page-subtitle">输入化学式或生活中常见的物质名称，生成可旋转、可缩放的 3D 结构。内置 ' +
-      stats.molecules + ' 个分子模型与 ' + stats.names + ' 条名称映射。</p>' +
+      '<div class="molecule-top">' +
+      '<div class="molecule-top__text">' +
+      '<h1 class="molecule-title">3D 分子</h1>' +
+      '<p class="molecule-subtitle">输入化学式或名称，拖拽旋转、滚轮缩放。</p>' +
       '</div>' +
-      '<div class="page-head__extra"><span class="chip chip--soft">常驻功能 · 无需后端</span></div>' +
-      '</header>' +
-
       '<form class="molecule-search" id="molecule-form" autocomplete="off">' +
       '<div class="molecule-search__field">' +
       '<span class="molecule-search__icon" aria-hidden="true">' + U.icon('search') + '</span>' +
-      '<input id="molecule-input" type="text" placeholder="输入化学式或名称，例如 H2O、甲烷、食盐、苯…" aria-label="输入化学式或物质名称">' +
+      '<input id="molecule-input" type="text" placeholder="H2O、甲烷、食盐、苯…" aria-label="输入化学式或物质名称">' +
       '</div>' +
-      '<button class="btn btn--primary" type="submit">生成 3D</button>' +
+      '<button class="btn btn--primary" type="submit">生成</button>' +
       '</form>' +
+      '</div>' +
 
       '<div class="suggest-row" id="molecule-suggest">' +
-      '<span class="suggest-row__label">热门：</span>' +
+      '<span class="suggest-row__label">热门</span>' +
       HOT_MOLECULES.map(function (item) {
-        return '<button type="button" class="chip chip--btn" data-query="' + item.query + '">' +
+        return '<button type="button" class="chip" data-query="' + item.query + '">' +
           item.label + '</button>';
       }).join('') +
       '</div>' +
@@ -608,7 +604,7 @@
     var panel = U.$('#molecule-panel');
     if (!panel) return;
 
-    var names = (molecule.names || []).slice(0, 3).join(' / ');
+    var displayName = (molecule.names && molecule.names[0]) || molecule.formula;
     var properties = [
       ['化学式', molecule.formula],
       ['几何构型', molecule.geometry],
@@ -620,29 +616,25 @@
 
     panel.innerHTML =
       '<div class="panel-card">' +
-      '<span class="eyebrow">' + (estimate ? 'VSEPR 推测结构' : '内置 3D 模型') + '</span>' +
-      '<h2 class="panel-title">' + U.escapeHtml(names || molecule.formula) +
+      '<p class="panel-kicker">' + (estimate ? 'VSEPR 推测结构' : '内置 3D 模型') + '</p>' +
+      '<h2 class="panel-title">' + U.escapeHtml(displayName) +
       '<span class="panel-title__formula">' + U.escapeHtml(molecule.formula) + '</span></h2>' +
-      '<div class="panel-tags">' +
-      '<span class="chip chip--accent">' + U.escapeHtml(molecule.geometry) + '</span>' +
-      '<span class="chip">' + U.escapeHtml(molecule.polarity || '') + '</span>' +
-      '</div>' +
+      '<p class="panel-summary">' + U.escapeHtml(molecule.geometry) + ' · ' +
+      U.escapeHtml(molecule.polarity || '—') + ' · ' +
+      (molecule.atomCount || (molecule.atoms || []).length) + ' 原子 · ' +
+      (molecule.bondCount || (molecule.bonds || []).length) + ' 化学键</p>' +
       '<dl class="property-list">' +
       properties.map(function (row) {
         return '<div class="property-row"><dt>' + row[0] + '</dt><dd>' +
           U.escapeHtml(row[1]) + '</dd></div>';
       }).join('') +
       '</dl>' +
-      '<div class="panel-stats">' +
-      '<div><strong>' + (molecule.atomCount || (molecule.atoms || []).length) + '</strong><span>原子</span></div>' +
-      '<div><strong>' + (molecule.bondCount || (molecule.bonds || []).length) + '</strong><span>化学键</span></div>' +
-      '</div>' +
       '<p class="panel-note">' + U.escapeHtml(molecule.notes || '拖拽可以旋转分子，滚轮可以缩放。') + '</p>' +
       (estimate ?
         '<div class="panel-warn">此结构由简化 VSEPR 规则推测，仅用于教学理解，实际键长键角请以实验数据为准。</div>' : '') +
       '<div class="panel-links">' +
-      '<a class="btn btn--ghost btn--sm" href="#/chapters">去学习相关章节</a>' +
-      '<a class="btn btn--ghost btn--sm" href="#/tools/identify">用工具分析物质</a>' +
+      '<a class="text-link" href="#/chapters">去学习相关章节 →</a>' +
+      '<a class="text-link" href="#/tools/identify">用工具分析物质 →</a>' +
       '</div>' +
       '</div>';
   }

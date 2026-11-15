@@ -81,7 +81,7 @@
     var attempt = CL.store.attemptStats();
     var wrong = CL.store.wrongStats();
 
-    var chapterCards = CL.data.chapters().map(function (chapter) {
+    var chapterRows = CL.data.chapters().map(function (chapter) {
       var questions = CL.data.questionsOf(chapter.id);
       var stats = CL.store.chapterStats(chapter.id);
       var types = questions.reduce(function (acc, item) {
@@ -89,27 +89,24 @@
         return acc;
       }, {});
 
-      return '<article class="quiz-chapter-card" style="--chapter-color:' + chapter.color + '">' +
-        '<div class="quiz-chapter-card__head">' +
-        '<span class="quiz-chapter-card__icon" aria-hidden="true">' +
+      return '<li>' +
+        '<a class="quiz-chapter-row" href="#/quiz/' + chapter.id + '">' +
+        '<span class="quiz-chapter-row__index" aria-hidden="true">' +
         (chapter.index < 10 ? '0' : '') + chapter.index + '</span>' +
-        '<div>' +
-        '<h3>' + U.escapeHtml(chapter.title) + '</h3>' +
-        '<p class="muted">' + U.escapeHtml(chapter.titleEn) + '</p>' +
-        '</div>' +
-        '</div>' +
-        '<div class="quiz-chapter-card__meta">' +
-        '<span class="chip">' + questions.length + ' 题</span>' +
-        '<span class="chip">单选 ' + (types.single || 0) + '</span>' +
-        '<span class="chip">判断 ' + (types.judge || 0) + '</span>' +
-        '<span class="chip">填空 ' + (types.fill || 0) + '</span>' +
-        '</div>' +
-        '<div class="quiz-chapter-card__stats">' +
-        '<div><strong>' + stats.attempts + '</strong><span>累计作答</span></div>' +
-        '<div><strong>' + stats.accuracy + '%</strong><span>正确率</span></div>' +
-        '</div>' +
-        '<a class="btn btn--primary btn--block" href="#/quiz/' + chapter.id + '">开始本章练习</a>' +
-        '</article>';
+        '<span class="quiz-chapter-row__main">' +
+        '<span class="quiz-chapter-row__title">' + U.escapeHtml(chapter.title) + '</span>' +
+        '<span class="quiz-chapter-row__en">' + U.escapeHtml(chapter.titleEn) + '</span>' +
+        '<span class="quiz-chapter-row__meta">' + questions.length + ' 题 · 单选 ' +
+        (types.single || 0) + ' · 判断 ' + (types.judge || 0) + ' · 填空 ' +
+        (types.fill || 0) + '</span>' +
+        '</span>' +
+        '<span class="quiz-chapter-row__stats">' +
+        '<span><strong>' + stats.attempts + '</strong> 次作答</span>' +
+        '<span><strong>' + stats.accuracy + '%</strong> 正确率</span>' +
+        '</span>' +
+        '<span class="quiz-chapter-row__arrow" aria-hidden="true">→</span>' +
+        '</a>' +
+        '</li>';
     }).join('');
 
     root.innerHTML =
@@ -117,35 +114,30 @@
       '<header class="page-head">' +
       '<div class="page-head__text">' +
       '<h1 class="page-title">课后练习</h1>' +
-      '<p class="page-subtitle">每章 9 道题，覆盖单选、判断与填空；提交后立即判分，做错自动进入错题集。</p>' +
+      '<p class="page-subtitle">' + CL.data.stats().chapters + ' 个章节 · ' +
+      CL.data.stats().questions + ' 道题 · 总体正确率 ' + attempt.accuracy +
+      '% · 待巩固错题 ' + wrong.pending + ' 道</p>' +
       '</div>' +
-      '<div class="page-head__extra"><div class="overview-pill"><strong>' + attempt.accuracy + '%</strong><span>总体正确率</span></div></div>' +
       '</header>' +
 
-      '<div class="quiz-quick">' +
-      '<button class="quick-card" id="start-random" type="button">' +
-      '<span class="quick-card__icon" aria-hidden="true">' + U.icon('shuffle') + '</span>' +
-      '<span class="quick-card__title">随机练习 10 题</span>' +
-      '<span class="quick-card__desc">从全部 ' + CL.data.stats().questions + ' 道题中随机抽取，检验综合水平</span>' +
-      '</button>' +
-      '<button class="quick-card" id="start-consolidate" type="button">' +
-      '<span class="quick-card__icon" aria-hidden="true">' + U.icon('refresh') + '</span>' +
-      '<span class="quick-card__title">错题再次巩固</span>' +
-      '<span class="quick-card__desc">当前有 ' + wrong.pending + ' 道待巩固错题，随机抽取重练</span>' +
-      '</button>' +
-      '<a class="quick-card" href="#/wrongbook">' +
-      '<span class="quick-card__icon" aria-hidden="true">' + U.icon('list') + '</span>' +
-      '<span class="quick-card__title">打开错题集</span>' +
-      '<span class="quick-card__desc">按章节查看错题、重做与标记已掌握</span>' +
-      '</a>' +
+      '<div class="quiz-actions">' +
+      '<button class="link-btn" id="start-random" type="button">随机练习 10 题</button>' +
+      '<span class="quiz-actions__sep" aria-hidden="true">·</span>' +
+      '<button class="link-btn" id="start-consolidate" type="button">错题再次巩固</button>' +
+      '<span class="quiz-actions__sep" aria-hidden="true">·</span>' +
+      '<a class="link-btn" href="#/wrongbook">打开错题集</a>' +
       '</div>' +
+      '<p class="page-note">随机练习从全部 ' + CL.data.stats().questions +
+      ' 道题中抽取；错题巩固会优先抽取待巩固错题。</p>' +
 
+      '<div class="section-head">' +
       '<h2 class="section-title">按章节练习</h2>' +
-      '<div class="quiz-chapter-grid">' + chapterCards + '</div>' +
-
-      '<div class="tip-box">' +
-      '<strong>练习建议：</strong>先读完本章知识点再做题；做错的题不要只看答案，务必修正“错因”并回到对应知识点复习，然后在错题集中重做一遍。' +
+      '<span class="section-head__meta">共 ' + CL.data.stats().chapters + ' 章</span>' +
       '</div>' +
+      '<ul class="quiz-chapter-list">' + chapterRows + '</ul>' +
+
+      '<p class="page-note">练习建议：先读完本章知识点再做题；做错的题不要只看答案，' +
+      '回到对应知识点复习后，再在错题集中重做一遍。</p>' +
       '</section>';
 
     var randomBtn = U.$('#start-random');
@@ -246,17 +238,15 @@
       '<section class="page page--session' + (session.compact ? ' page--compact' : '') + '">' +
       '<header class="session-head">' +
       '<div class="session-head__left">' +
-      (session.compact ? '' : '<a class="btn btn--ghost btn--sm" href="' + session.returnTo + '" id="exit-session">← 退出</a>') +
-      '<div>' +
+      (session.compact ? '' : '<a class="session-exit" href="' + session.returnTo + '" id="exit-session">← 退出</a>') +
       '<h1 class="session-title">' + U.escapeHtml(session.title) + '</h1>' +
-      '<p class="session-subtitle" id="session-progress-text"></p>' +
       '</div>' +
-      '</div>' +
-      '<div class="session-head__right">' +
-      '<span class="score-chip" id="score-chip">✓ 0</span>' +
-      '<button class="btn btn--ghost btn--sm" id="finish-early" type="button">提前交卷</button>' +
-      '</div>' +
+      '<button class="btn btn--ghost btn--sm" id="finish-early" type="button">交卷</button>' +
       '</header>' +
+      '<div class="session-meta">' +
+      '<span class="session-subtitle" id="session-progress-text"></span>' +
+      '<span class="session-score" id="score-chip">答对 0</span>' +
+      '</div>' +
       '<div class="progress-bar"><div class="progress-bar__fill" id="session-progress-bar"></div></div>' +
       '<div class="session-body">' +
       '<aside class="palette" id="question-palette" aria-label="题目导航"></aside>' +
@@ -359,12 +349,12 @@
 
     var score = U.$('#score-chip');
     if (score) {
-      score.textContent = '✓ ' + session.correctCount;
+      score.textContent = '答对 ' + session.correctCount;
     }
 
     var palette = U.$('#question-palette');
     if (palette) {
-      palette.innerHTML = '<div class="palette__title">题目导航</div>' +
+      palette.innerHTML = '<div class="palette__title">题目</div>' +
         '<div class="palette__grid">' +
         session.questions.map(function (item, i) {
           var classes = ['palette__item'];
@@ -434,7 +424,7 @@
           if (submitted) classes.push('is-locked');
           return '<button type="button" class="' + classes.join(' ') + '" data-value="' + (value ? 'true' : 'false') + '"' +
             (submitted ? ' disabled' : '') + '>' +
-            '<span class="option__icon">' + (value ? '✓' : '✕') + '</span>' +
+            '<span class="option__icon">' + U.icon(value ? 'check' : 'x') + '</span>' +
             '<span class="option__text">' + (value ? '正确' : '错误') + '</span>' +
             '</button>';
         }).join('') +
@@ -481,13 +471,12 @@
     stage.innerHTML =
       '<article class="question-card" data-question-id="' + question.id + '">' +
       '<div class="question-card__meta">' +
-      '<span class="badge badge--type">' + typeName(question.type) + '</span>' +
-      '<span class="badge">' + U.escapeHtml(question.difficulty || '基础') + '</span>' +
-      (chapter ? '<span class="badge badge--chapter" style="--chapter-color:' + chapter.color + '">' +
-        U.escapeHtml(chapter.title) + '</span>' : '') +
+      '<span>' + typeName(question.type) + '</span>' +
+      '<span>' + U.escapeHtml(question.difficulty || '基础') + '</span>' +
+      (chapter ? '<span>' + U.escapeHtml(chapter.title) + '</span>' : '') +
       '<span class="question-card__id">' + question.id + '</span>' +
       '</div>' +
-      '<h2 class="question-card__stem">' + (session.index + 1) + '. ' + U.escapeHtml(question.question) + '</h2>' +
+      '<h2 class="question-card__stem">' + U.escapeHtml(question.question) + '</h2>' +
       bodyHtml +
       feedbackHtml +
       '</article>';
@@ -617,30 +606,19 @@
     }).join('');
 
     var wrongCount = answered - correct;
-    var resultClass = accuracy >= 80 ? 'excellent' : (accuracy >= 60 ? 'good' : 'need-work');
     var encouragement = accuracy >= 80
-      ? '掌握得不错！可以挑战其他章节或随机练习。'
-      : (accuracy >= 60 ? '基础已经具备，建议把错题重做一遍再继续。' : '别灰心，先回到知识点重新阅读讲解，再来做一遍错题。');
+      ? '掌握得不错，可以挑战其他章节或随机练习。'
+      : (accuracy >= 60 ? '基础已经具备，建议把错题重做一遍再继续。' : '先回到知识点重新阅读讲解，再来做一遍错题。');
 
     session.container.innerHTML =
       '<section class="page page--result">' +
       '<header class="result-head">' +
-      '<div class="result-ring ' + resultClass + '">' +
-      U.progressRing(accuracy, { size: 132, stroke: 10, color: accuracy >= 80 ? '#0f7b4f' : (accuracy >= 60 ? '#8a5a00' : '#b3261e') }) +
-      '</div>' +
-      '<div class="result-head__text">' +
-      '<span class="eyebrow">练习完成</span>' +
-      '<h1>' + U.escapeHtml(session.title) + '</h1>' +
-      '<p>' + encouragement + '</p>' +
-      '</div>' +
+      '<p class="eyebrow">练习完成 · ' + U.escapeHtml(session.title) + '</p>' +
+      '<h1 class="result-score">' + accuracy + '%<span>正确率</span></h1>' +
+      '<p class="result-summary">答对 ' + correct + ' / ' + total + ' · 答错 ' +
+      wrongCount + ' · 未作答 ' + (total - answered) + ' · 用时 ' + minutes + ' 分钟</p>' +
+      '<p class="result-hint">' + encouragement + '</p>' +
       '</header>' +
-
-      '<div class="result-stats">' +
-      '<div class="result-stat"><strong>' + correct + '</strong><span>答对</span></div>' +
-      '<div class="result-stat"><strong>' + wrongCount + '</strong><span>答错</span></div>' +
-      '<div class="result-stat"><strong>' + (total - answered) + '</strong><span>未作答</span></div>' +
-      '<div class="result-stat"><strong>' + minutes + '</strong><span>用时（分钟）</span></div>' +
-      '</div>' +
 
       '<div class="result-actions">' +
       '<button class="btn btn--primary" id="retry-quiz" type="button">再做一次</button>' +
@@ -650,7 +628,10 @@
         '<a class="btn btn--ghost" href="#/quiz">返回练习中心</a>') +
       '</div>' +
 
+      '<div class="section-head">' +
       '<h2 class="section-title">逐题回顾</h2>' +
+      '<span class="section-head__meta">' + total + ' 题</span>' +
+      '</div>' +
       '<ul class="review-list">' + review + '</ul>' +
       '</section>';
 

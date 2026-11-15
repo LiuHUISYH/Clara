@@ -238,11 +238,11 @@
         '<section class="page page--notfound">' +
         '<div class="empty-state">' +
         '<div class="empty-state__icon">' + U.icon('compass') + '</div>' +
-        '<h1>页面走丢了</h1>' +
-        '<p>找不到路径 <code>#' + U.escapeHtml(parsed.path) + '</code>，它可能已被移动或删除。</p>' +
+        '<h1>页面未找到</h1>' +
+        '<p>路径 <code>#' + U.escapeHtml(parsed.path) + '</code> 不存在，可能已被移动或删除。</p>' +
         '<div class="empty-state__actions">' +
         '<a class="btn btn--primary" href="#/home">返回首页</a>' +
-        '<a class="btn btn--ghost" href="#/chapters">去章节学习</a>' +
+        '<a class="text-link" href="#/chapters">去章节学习 →</a>' +
         '</div>' +
         '</div>' +
         '</section>';

@@ -53,7 +53,7 @@
 
   /* 布局 */
   --header-height: 64px;
-  --container: 1200px;
+  --container: 1152px;
 
   /* 过渡：只保留颜色与边框的变化 */
   --transition: 140ms ease;
@@ -65,6 +65,10 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 html {

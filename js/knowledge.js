@@ -2,7 +2,7 @@
  * knowledge.js —— 模块 A：知识讲解
  * ------------------------------------------------------------------
  * 负责三个页面：
- *   1. 章节列表（#/chapters）：5 个章节卡片 + 进度 + 搜索
+ *   1. 章节列表（#/chapters）：5 个章节行 + 进度 + 搜索
  *   2. 章节详情（#/chapter/:id）：知识点清单 + 学习进度 + 练习入口
  *   3. 知识点详情（#/knowledge/:id）：定义、细致讲解、举例、易错点、小结
  */
@@ -48,61 +48,49 @@
     var overall = U.percent(readCount, stats.points);
     var attempt = CL.store.attemptStats();
 
-    var cards = CL.data.chapters().map(function (chapter) {
+    var rows = CL.data.chapters().map(function (chapter) {
       var points = CL.data.pointsOf(chapter.id);
       var progress = CL.store.chapterProgress(chapter.id, points);
-      var quizStats = CL.store.chapterStats(chapter.id);
+      var questionCount = CL.data.questionsOf(chapter.id).length;
 
-      return '<article class="chapter-card" style="--chapter-color:' + chapter.color + '">' +
-        '<div class="chapter-card__head">' +
-        '<span class="chapter-card__icon" aria-hidden="true">' +
+      return '<li>' +
+        '<a class="chapter-row" href="#/chapter/' + chapter.id + '">' +
+        '<span class="chapter-row__index" aria-hidden="true">' +
         (chapter.index < 10 ? '0' : '') + chapter.index + '</span>' +
-        '<span class="chapter-card__index">第 ' + U.cnNumber(chapter.index) + ' 章</span>' +
-        '</div>' +
-        '<h2 class="chapter-card__title">' + U.escapeHtml(chapter.title) + '</h2>' +
-        '<p class="chapter-card__en">' + U.escapeHtml(chapter.titleEn) + '</p>' +
-        '<p class="chapter-card__desc">' + U.escapeHtml(chapter.description) + '</p>' +
-        '<div class="chapter-card__meta">' +
-        '<span class="chip">' + points.length + ' 个知识点</span>' +
-        '<span class="chip">' + CL.data.questionsOf(chapter.id).length + ' 道练习</span>' +
-        '<span class="chip chip--soft">' + U.escapeHtml(chapter.examWeight) + '</span>' +
-        '</div>' +
-        '<div class="chapter-card__progress">' +
-        '<div class="chapter-card__stat">' +
-        '<span class="chapter-card__percent">' + progress.percent + '%</span>' +
+        '<span class="chapter-row__main">' +
+        '<span class="chapter-row__title">' + U.escapeHtml(chapter.title) + '</span>' +
+        '<span class="chapter-row__en">' + U.escapeHtml(chapter.titleEn) + '</span>' +
+        '<span class="chapter-row__desc">' + U.escapeHtml(chapter.description) + '</span>' +
+        '</span>' +
+        '<span class="chapter-row__meta">' +
+        '<span>' + points.length + ' 个知识点</span>' +
+        '<span>' + questionCount + ' 道练习</span>' +
+        '<span>' + U.escapeHtml(chapter.examWeight) + '</span>' +
+        '</span>' +
+        '<span class="chapter-row__progress">' +
+        '<span class="chapter-row__percent">' + progress.percent + '%</span>' +
         '<span class="meter"><span class="meter__fill" style="width:' + progress.percent +
-        '%;background:' + chapter.color + '"></span></span>' +
-        '</div>' +
-        '<div class="chapter-card__progress-text">' +
-        '<span>已学 ' + progress.read + ' / ' + progress.total + ' 个知识点</span>' +
-        '<span class="muted">练习正确率 ' + quizStats.accuracy + '%（' + quizStats.attempts + ' 次作答）</span>' +
-        '</div>' +
-        '</div>' +
-        '<div class="chapter-card__actions">' +
-        '<a class="btn btn--primary btn--sm" href="#/chapter/' + chapter.id + '">查看知识点</a>' +
-        '<a class="btn btn--ghost btn--sm" href="#/quiz/' + chapter.id + '">开始练习</a>' +
-        '</div>' +
-        '</article>';
+        '%"></span></span>' +
+        '<span class="chapter-row__read">已学 ' + progress.read + ' / ' + progress.total + '</span>' +
+        '</span>' +
+        '<span class="chapter-row__arrow" aria-hidden="true">→</span>' +
+        '</a>' +
+        '</li>';
     }).join('');
 
     root.innerHTML =
       '<section class="page page--chapters">' +
       pageHeader('章节学习',
-        '覆盖 AP 化学五大章节，每个知识点都包含定义、细致讲解、举例推导、易错点与小结。',
-        '<div class="overview-pill"><strong>' + overall + '%</strong><span>总体学习进度</span></div>') +
-      '<div class="stat-strip">' +
-      '<div class="stat-strip__item"><strong>' + stats.points + '</strong><span>知识点</span></div>' +
-      '<div class="stat-strip__item"><strong>' + stats.questions + '</strong><span>练习题</span></div>' +
-      '<div class="stat-strip__item"><strong>' + readCount + '</strong><span>已学完</span></div>' +
-      '<div class="stat-strip__item"><strong>' + attempt.accuracy + '%</strong><span>答题正确率</span></div>' +
-      '</div>' +
-      '<div class="search-bar">' +
+        stats.chapters + ' 个章节 · ' + stats.points + ' 个知识点 · ' + stats.questions +
+        ' 道练习 · 已学 ' + readCount + ' / ' + stats.points + '（' + overall +
+        '%）· 答题正确率 ' + attempt.accuracy + '%') +
+      '<div class="search-bar search-bar--line">' +
       '<span class="search-bar__icon" aria-hidden="true">' + U.icon('search') + '</span>' +
       '<input id="knowledge-search" type="search" placeholder="搜索知识点，例如：氢键、VSEPR、依数性……" autocomplete="off" aria-label="搜索知识点">' +
       '<button class="btn btn--ghost btn--sm" id="search-clear" type="button" hidden>清除</button>' +
       '</div>' +
       '<div id="search-results" class="search-results" hidden></div>' +
-      '<div class="chapter-grid">' + cards + '</div>' +
+      '<ul class="chapter-list">' + rows + '</ul>' +
       '</section>';
 
     bindSearch();
@@ -184,56 +172,54 @@
     var prev = chapters[currentIndex - 1];
     var next = chapters[currentIndex + 1];
 
-    var pointCards = points.map(function (point, index) {
+    var pointRows = points.map(function (point, index) {
       var isRead = CL.store.isPointRead(point.id);
-      return '<li class="point-row">' +
-        '<span class="point-row__index">' + (index + 1) + '</span>' +
-        '<div class="point-row__main">' +
-        '<a class="point-row__title" href="#/knowledge/' + point.id + '">' + U.escapeHtml(point.title) + '</a>' +
+      return '<li>' +
+        '<a class="point-row" href="#/knowledge/' + point.id + '">' +
+        '<span class="point-row__index" aria-hidden="true">' +
+        (index < 9 ? '0' : '') + (index + 1) + '</span>' +
+        '<span class="point-row__main">' +
+        '<span class="point-row__title">' + U.escapeHtml(point.title) + '</span>' +
         '<span class="point-row__en">' + U.escapeHtml(point.titleEn) + '</span>' +
-        '<div class="point-row__tags">' +
-        (point.tags || []).slice(0, 4).map(function (tag) {
-          return '<span class="tag">' + U.escapeHtml(tag) + '</span>';
-        }).join('') +
-        '</div>' +
-        '</div>' +
+        '</span>' +
         '<span class="point-row__status ' + (isRead ? 'is-read' : '') + '">' +
-        (isRead ? '✓ 已学' : '未学') + '</span>' +
-        '<a class="btn btn--ghost btn--sm" href="#/knowledge/' + point.id + '">' +
-        (isRead ? '复习' : '学习') + '</a>' +
+        (isRead ? '已学' : '未学') + '</span>' +
+        '<span class="point-row__arrow" aria-hidden="true">→</span>' +
+        '</a>' +
         '</li>';
     }).join('');
 
     root.innerHTML =
-      '<section class="page page--chapter" style="--chapter-color:' + chapter.color + '">' +
+      '<section class="page page--chapter">' +
       breadcrumb([
         { label: '首页', href: '#/home' },
         { label: '章节学习', href: '#/chapters' },
         { label: chapter.title }
       ]) +
-      '<header class="chapter-hero">' +
-      '<div class="chapter-hero__icon" aria-hidden="true">' +
-      (chapter.index < 10 ? '0' : '') + chapter.index + '</div>' +
-      '<div class="chapter-hero__text">' +
-      '<span class="chapter-hero__index">第 ' + U.cnNumber(chapter.index) + ' 章 · ' + U.escapeHtml(chapter.examWeight) + '</span>' +
-      '<h1>' + U.escapeHtml(chapter.title) + '</h1>' +
-      '<p class="chapter-hero__en">' + U.escapeHtml(chapter.titleEn) + '</p>' +
-      '<p class="chapter-hero__desc">' + U.escapeHtml(chapter.description) + '</p>' +
+      '<header class="chapter-head">' +
+      '<div class="chapter-head__text">' +
+      '<p class="eyebrow">第 ' + U.cnNumber(chapter.index) + ' 章 · 考试占比 ' +
+      U.escapeHtml(chapter.examWeight) + '</p>' +
+      '<h1 class="chapter-head__title">' + U.escapeHtml(chapter.title) + '</h1>' +
+      '<p class="chapter-head__en">' + U.escapeHtml(chapter.titleEn) + '</p>' +
+      '<p class="chapter-head__desc">' + U.escapeHtml(chapter.description) + '</p>' +
+      '<p class="chapter-head__meta">' + points.length + ' 个知识点 · ' +
+      CL.data.questionsOf(chapter.id).length + ' 道练习 · 练习正确率 ' +
+      quizStats.accuracy + '%（' + quizStats.attempts + ' 次作答）</p>' +
       '</div>' +
-      '<div class="chapter-hero__progress">' +
-      '<span class="chapter-hero__percent">' + progress.percent + '%</span>' +
-      '<span class="meter chapter-hero__meter"><span class="meter__fill" style="width:' +
-      progress.percent + '%;background:' + chapter.color + '"></span></span>' +
-      '<span>已学 ' + progress.read + ' / ' + progress.total + '</span>' +
+      '<div class="chapter-head__aside">' +
+      '<span class="chapter-head__percent">' + progress.percent + '%</span>' +
+      '<span class="meter chapter-head__meter"><span class="meter__fill" style="width:' +
+      progress.percent + '%"></span></span>' +
+      '<span class="chapter-head__read">已学 ' + progress.read + ' / ' + progress.total + '</span>' +
+      '<a class="text-link" href="#/quiz/' + chapter.id + '">去做本章练习 →</a>' +
       '</div>' +
       '</header>' +
-      '<div class="chapter-actions">' +
-      '<a class="btn btn--primary" href="#/quiz/' + chapter.id + '">去做本章练习（' +
-      CL.data.questionsOf(chapter.id).length + ' 题）</a>' +
-      '<span class="muted">本章练习正确率：' + quizStats.accuracy + '%（共 ' + quizStats.attempts + ' 次作答）</span>' +
-      '</div>' +
+      '<div class="section-head">' +
       '<h2 class="section-title">知识点清单</h2>' +
-      '<ul class="point-list">' + pointCards + '</ul>' +
+      '<span class="section-head__meta">共 ' + points.length + ' 节</span>' +
+      '</div>' +
+      '<ul class="point-list">' + pointRows + '</ul>' +
       '<nav class="chapter-pager">' +
       (prev ? '<a class="pager-link" href="#/chapter/' + prev.id + '">← ' + U.escapeHtml(prev.title) + '</a>' : '<span></span>') +
       (next ? '<a class="pager-link pager-link--next" href="#/chapter/' + next.id + '">' + U.escapeHtml(next.title) + ' →</a>' : '<span></span>') +
@@ -272,11 +258,11 @@
       return '<p class="prose__paragraph" data-paragraph="' + (i + 1) + '">' + U.escapeHtml(paragraph) + '</p>';
     }).join('');
 
-    var examplesHtml = (point.examples || []).map(function (example, i) {
-      return '<article class="example-card">' +
-        '<h4 class="example-card__title">' + U.escapeHtml(example.title) + '</h4>' +
-        '<p class="example-card__content">' + U.escapeHtml(example.content) + '</p>' +
-        '<ol class="example-card__steps">' +
+    var examplesHtml = (point.examples || []).map(function (example) {
+      return '<article class="example-item">' +
+        '<h3 class="example-item__title">' + U.escapeHtml(example.title) + '</h3>' +
+        '<p class="example-item__content">' + U.escapeHtml(example.content) + '</p>' +
+        '<ol class="example-item__steps">' +
         (example.steps || []).map(function (step) {
           return '<li>' + U.escapeHtml(step) + '</li>';
         }).join('') +
@@ -291,71 +277,73 @@
     }).join('');
 
     var summaryHtml = (point.summary || []).map(function (item, i) {
-      return '<div class="summary-card"><span class="summary-card__index">' + (i + 1) + '</span>' +
-        '<p>' + U.escapeHtml(item) + '</p></div>';
+      return '<li class="summary-item"><span class="summary-item__index">' +
+        (i < 9 ? '0' : '') + (i + 1) + '</span>' +
+        '<p>' + U.escapeHtml(item) + '</p></li>';
     }).join('');
 
     var tagsHtml = (point.tags || []).map(function (tag) {
-      return '<span class="tag tag--accent">' + U.escapeHtml(tag) + '</span>';
+      return '<span class="tag">' + U.escapeHtml(tag) + '</span>';
     }).join('');
 
     root.innerHTML =
-      '<section class="page page--knowledge" style="--chapter-color:' + (chapter ? chapter.color : '#007a87') + '">' +
+      '<section class="page page--knowledge">' +
       breadcrumb([
         { label: '首页', href: '#/home' },
         { label: '章节学习', href: '#/chapters' },
         { label: chapter ? chapter.title : '章节', href: '#/chapter/' + point.chapter },
         { label: point.title }
       ]) +
+      '<article class="knowledge-article">' +
       '<header class="knowledge-head">' +
-      '<div class="knowledge-head__meta">' +
-      '<span class="pill" style="background:' + (chapter ? chapter.color : '#007a87') + '22;color:' + (chapter ? chapter.color : '#007a87') + '">' +
-      (chapter ? U.escapeHtml(chapter.title) : '') + '</span>' +
-      '<span class="chip">第 ' + (index + 1) + ' / ' + siblings.length + ' 个知识点</span>' +
-      (isRead ? '<span class="chip chip--success">✓ 已记录学习</span>' : '') +
-      '</div>' +
+      '<p class="knowledge-head__meta">' +
+      '<span>' + (chapter ? U.escapeHtml(chapter.title) : '章节') + '</span>' +
+      '<span>第 ' + (index + 1) + ' / ' + siblings.length + ' 节</span>' +
+      (isRead ? '<span class="knowledge-head__read">已学</span>' : '') +
+      '</p>' +
       '<h1 class="knowledge-title">' + U.escapeHtml(point.title) + '</h1>' +
       '<p class="knowledge-title-en">' + U.escapeHtml(point.titleEn) + '</p>' +
       '<div class="knowledge-tags">' + tagsHtml + '</div>' +
       '</header>' +
 
-      '<section class="content-block content-block--definition">' +
-      '<h2 class="content-block__title">定义</h2>' +
+      '<section class="knowledge-section knowledge-section--lead">' +
+      '<h2>定义</h2>' +
       '<p class="definition-cn">' + U.escapeHtml(point.definition.cn) + '</p>' +
       '<p class="definition-en" lang="en">' + U.escapeHtml(point.definition.en) + '</p>' +
       '</section>' +
 
-      '<section class="content-block">' +
-      '<h2 class="content-block__title">细致讲解</h2>' +
+      '<section class="knowledge-section">' +
+      '<h2>细致讲解</h2>' +
       '<div class="prose">' + explanationHtml + '</div>' +
       '</section>' +
 
-      '<section class="content-block">' +
-      '<h2 class="content-block__title">举例分析</h2>' +
-      examplesHtml +
+      '<section class="knowledge-section">' +
+      '<h2>举例分析</h2>' +
+      '<div class="example-list">' + examplesHtml + '</div>' +
       '</section>' +
 
-      '<section class="content-block content-block--pitfalls">' +
-      '<h2 class="content-block__title">易错点提示</h2>' +
+      '<section class="knowledge-section knowledge-section--pitfalls">' +
+      '<h2>易错点</h2>' +
       '<ul class="pitfall-list">' + pitfallsHtml + '</ul>' +
       '</section>' +
 
-      '<section class="content-block">' +
-      '<h2 class="content-block__title">小结卡片</h2>' +
-      '<div class="summary-grid">' + summaryHtml + '</div>' +
+      '<section class="knowledge-section">' +
+      '<h2>小结</h2>' +
+      '<ol class="summary-list">' + summaryHtml + '</ol>' +
       '</section>' +
 
       '<footer class="knowledge-footer">' +
       '<div class="knowledge-footer__actions">' +
-      '<button class="btn btn--ghost" id="toggle-read" type="button">' +
+      '<button class="btn btn--ghost btn--sm" id="toggle-read" type="button">' +
       (isRead ? '标记为未学' : '标记为已学') + '</button>' +
-      '<a class="btn btn--primary" href="#/quiz/' + point.chapter + '">去本章练习</a>' +
+      '<a class="text-link" href="#/quiz/' + point.chapter + '">去本章练习 →</a>' +
       '</div>' +
       '<nav class="knowledge-pager">' +
-      (prev ? '<a class="pager-link" href="#/knowledge/' + prev.id + '">← ' + U.escapeHtml(prev.title) + '</a>' : '<span></span>') +
-      (next ? '<a class="pager-link pager-link--next" href="#/knowledge/' + next.id + '">' + U.escapeHtml(next.title) + ' →</a>' : '<span></span>') +
+      (prev ? '<a class="pager-link" href="#/knowledge/' + prev.id + '">← 上一节：' + U.escapeHtml(prev.title) + '</a>' : '<span></span>') +
+      (next ? '<a class="pager-link pager-link--next" href="#/knowledge/' + next.id + '">下一节：' + U.escapeHtml(next.title) + ' →</a>' : '<span></span>') +
       '</nav>' +
       '</footer>' +
+      '</article>' +
       '</section>';
 
     var toggleBtn = U.$('#toggle-read');

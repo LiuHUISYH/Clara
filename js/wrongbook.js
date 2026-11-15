@@ -49,7 +49,7 @@
       '</div>' +
       '<label class="select-wrap"><span class="sr-only">选择章节</span>' +
       '<select id="wrong-chapter-filter" class="select">' + chapterOptions + '</select></label>' +
-      '<button class="btn btn--primary btn--sm" id="start-consolidate-wrong" type="button">' +
+      '<button class="btn btn--primary btn--sm filter-bar__action" id="start-consolidate-wrong" type="button">' +
       '再次巩固（' + stats.pending + '）</button>' +
       '</div>';
 
@@ -78,11 +78,12 @@
       bodyHtml = CL.data.chapters().map(function (chapter) {
         var list = groups[chapter.id];
         if (!list || !list.length) return '';
-        return '<section class="wrong-group" style="--chapter-color:' + chapter.color + '">' +
+        return '<section class="wrong-group">' +
           '<header class="wrong-group__head">' +
-          '<h2><span class="wrong-group__icon">' + (chapter.index < 10 ? '0' : '') + chapter.index + '</span>' +
+          '<h2><span class="wrong-group__index">' +
+          (chapter.index < 10 ? '0' : '') + chapter.index + '</span>' +
           U.escapeHtml(chapter.title) + '</h2>' +
-          '<span class="chip">' + list.length + ' 道</span>' +
+          '<span class="wrong-group__count">' + list.length + ' 道</span>' +
           '</header>' +
           '<ul class="wrong-list">' +
           list.map(function (item) { return wrongItemHtml(item); }).join('') +
@@ -101,27 +102,19 @@
       '<header class="page-head">' +
       '<div class="page-head__text">' +
       '<h1 class="page-title">错题集</h1>' +
-      '<p class="page-subtitle">做错的题会自动收集到这里。重做答对后会自动标记为“已掌握”，并保留历史记录。</p>' +
-      '</div>' +
-      '<div class="page-head__extra">' +
-      '<div class="overview-pill"><strong>' + stats.pending + '</strong><span>待巩固错题</span></div>' +
+      '<p class="page-subtitle">共 ' + stats.total + ' 道 · 待巩固 ' + stats.pending +
+      ' · 已掌握 ' + stats.mastered + ' · 总体正确率 ' +
+      CL.store.attemptStats().accuracy + '%</p>' +
       '</div>' +
       '</header>' +
-
-      '<div class="stat-strip">' +
-      '<div class="stat-strip__item"><strong>' + stats.total + '</strong><span>错题总数</span></div>' +
-      '<div class="stat-strip__item"><strong>' + stats.pending + '</strong><span>待巩固</span></div>' +
-      '<div class="stat-strip__item"><strong>' + stats.mastered + '</strong><span>已掌握</span></div>' +
-      '<div class="stat-strip__item"><strong>' + CL.store.attemptStats().accuracy + '%</strong><span>总体正确率</span></div>' +
-      '</div>' +
 
       filtersHtml +
       bodyHtml +
 
       (stats.total ?
         '<footer class="wrong-footer">' +
-        '<button class="btn btn--ghost btn--sm" id="export-wrong" type="button">导出学习数据</button>' +
-        '<button class="btn btn--danger btn--sm" id="clear-wrong" type="button">清空错题集</button>' +
+        '<button class="link-btn" id="export-wrong" type="button">导出学习数据</button>' +
+        '<button class="link-btn link-btn--danger" id="clear-wrong" type="button">清空错题集</button>' +
         '<span class="muted">错题数据保存在本机浏览器中（localStorage），不会上传到任何服务器。</span>' +
         '</footer>' : '') +
       '</section>';
@@ -137,23 +130,25 @@
     var questionText = question ? question.question : '（题目数据缺失）';
 
     return '<li class="wrong-item ' + (item.mastered ? 'is-mastered' : '') + '" data-id="' + item.questionId + '">' +
+      '<div class="wrong-item__main">' +
       '<div class="wrong-item__head">' +
-      '<span class="wrong-item__status">' + (item.mastered ? '✓ 已掌握' : '待巩固') + '</span>' +
+      '<span class="wrong-item__status">' + (item.mastered ? '已掌握' : '待巩固') + '</span>' +
       '<span class="wrong-item__count">答错 ' + item.wrongCount + ' 次</span>' +
       '<span class="wrong-item__time">' + U.relativeTime(item.lastWrongAt) + '</span>' +
       '</div>' +
       '<p class="wrong-item__question">' + U.escapeHtml(U.truncate(questionText, 120)) + '</p>' +
       '<div class="wrong-item__meta">' +
-      (question ? '<span class="chip">' + CL.quiz.typeName(question.type) + '</span>' : '') +
-      (knowledge ? '<a class="chip chip--link" href="#/knowledge/' + knowledge.id + '">' +
+      (question ? '<span>' + CL.quiz.typeName(question.type) + '</span>' : '') +
+      (knowledge ? '<a href="#/knowledge/' + knowledge.id + '">' +
         U.escapeHtml(knowledge.title) + '</a>' : '') +
-      '<span class="muted">首次答错：' + U.formatTime(item.firstWrongAt).slice(0, 10) + '</span>' +
+      '<span>首次答错：' + U.formatTime(item.firstWrongAt).slice(0, 10) + '</span>' +
+      '</div>' +
       '</div>' +
       '<div class="wrong-item__actions">' +
-      '<button class="btn btn--primary btn--sm" data-action="redo" type="button">重做</button>' +
-      '<button class="btn btn--ghost btn--sm" data-action="master" type="button">' +
+      '<button class="link-btn" data-action="redo" type="button">重做</button>' +
+      '<button class="link-btn" data-action="master" type="button">' +
       (item.mastered ? '取消已掌握' : '标记已掌握') + '</button>' +
-      '<button class="btn btn--ghost btn--sm btn--danger-text" data-action="remove" type="button">移除</button>' +
+      '<button class="link-btn link-btn--danger" data-action="remove" type="button">移除</button>' +
       '</div>' +
       '</li>';
   }
