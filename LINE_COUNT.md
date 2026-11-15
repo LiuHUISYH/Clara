@@ -14,11 +14,11 @@ wc -l index.html css/*.css js/*.js data/*.json
 
 | 文件 | 行数 |
 | --- | ---: |
-| `index.html` | 119 |
+| `index.html` | 116 |
 | `css/base.css` | 508 |
-| `css/layout.css` | 570 |
-| `css/components.css` | 2,088 |
-| `css/pages.css` | 1,193 |
+| `css/layout.css` | 528 |
+| `css/components.css` | 1,885 |
+| `css/pages.css` | 1,062 |
 | `js/utils.js` | 570 |
 | `js/storage.js` | 400 |
 | `js/data.js` | 325 |
@@ -28,29 +28,29 @@ wc -l index.html css/*.css js/*.js data/*.json
 | `js/wrongbook.js` | 305 |
 | `js/molecule3d.js` | 1,097 |
 | `js/tools.js` | 817 |
-| `js/app.js` | 433 |
+| `js/app.js` | 305 |
 | `data/knowledge.json` | 1,098 |
 | `data/quiz.json` | 640 |
 | `data/molecules.json` | 2,551 |
 | `data/nameMap.json` | 55 |
 | `data/equations.json` | 414 |
-| **合计** | **14,464** |
+| **合计** | **13,957** |
 
 ## 二、分类汇总
 
 | 类别 | 行数 | 占比 |
 | --- | ---: | ---: |
-| HTML | 119 | 0.8% |
-| CSS | 4,359 | 30.1% |
-| JavaScript | 5,228 | 36.1% |
-| JSON 数据 | 4,758 | 32.9% |
-| **核心交付代码合计** | **14,464** | **100%** |
+| HTML | 116 | 0.8% |
+| CSS | 3,983 | 28.5% |
+| JavaScript | 5,100 | 36.5% |
+| JSON 数据 | 4,758 | 34.1% |
+| **核心交付代码合计** | **13,957** | **100%** |
 
 ```
-14,464 ÷ 8,000 ≈ 1.81 倍
+13,957 ÷ 8,000 ≈ 1.74 倍
 ```
 
-超出 PRD 最低要求约 81%。
+超出 PRD 最低要求约 74%。
 
 ## 三、附加文件（不计入核心交付代码）
 
@@ -63,7 +63,7 @@ wc -l index.html css/*.css js/*.js data/*.json
 | `data/*.js`（5 个） | 30 | 自动生成的包装文件（每个 6 行） |
 | **附加合计** | **1,301** | |
 
-全部文件（含附加）总计：**15,765 行**。
+全部文件（含附加）总计：**15,258 行**。
 
 ## 四、统计口径说明
 
@@ -71,9 +71,9 @@ wc -l index.html css/*.css js/*.js data/*.json
 2. **不灌水**：
    - 没有任何空函数、占位 TODO 或复制粘贴的重复逻辑；
    - 知识点讲解、题目解析、易错点均为针对具体概念撰写的实质内容（例如“氢键与水的反常性质”包含 4 段讲解、2 个带步骤的实例、4 条易错点与 4 条小结）；
-   - CSS 按组件 / 页面拆分，每个选择器都有实际用途；
+   - CSS 按组件 / 页面拆分，首页改版后已删除无引用的旧卡片样式，保留的选择器均有实际用途；
    - 3D 渲染器、配平算法、VSEPR 推测均为真实实现，并配有测试。
-3. **数据文件计入**：PRD 明确把 JSON 数据计入总行数；`data/molecules.json` 的 2,551 行来自 33 个分子的逐原子坐标与逐键连接，`data/knowledge.json` 的 1,103 行来自 20 个知识点的完整讲解，均属于产品内容本身，不是重复填充。
+3. **数据文件计入**：PRD 明确把 JSON 数据计入总行数；`data/molecules.json` 的 2,551 行来自 33 个分子的逐原子坐标与逐键连接，`data/knowledge.json` 的 1,098 行来自 20 个知识点的完整讲解，均属于产品内容本身，不是重复填充。
 4. **包装文件单列**：`data/*.js` 是为了支持 `file://` 直接运行而由脚本生成的同内容副本，只有 30 行（每个文件一行 JSON），已在统计中单列，避免重复计算数据量。
 
 ## 五、复现校验
@@ -85,7 +85,7 @@ python3 tools/build_data.py
 # 2. 语法与加载检查
 /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc tools/syntax_check.js
 
-# 3. 冒烟测试（42 项）
+# 3. 冒烟测试（44 项）
 /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc tools/smoke_test.js
 
 # 4. 行数统计

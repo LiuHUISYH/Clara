@@ -87,8 +87,8 @@
 
   /** 根据路由更新导航高亮 */
   function updateNav(name) {
-    var nav = document.getElementById('main-nav');
-    if (!nav) return;
+    var links = document.querySelectorAll('[data-nav]');
+    if (!links.length) return;
 
     var alias = {
       chapter: 'chapters',
@@ -101,7 +101,7 @@
     };
     var active = alias[name] || name;
 
-    Array.prototype.forEach.call(nav.querySelectorAll('[data-nav]'), function (link) {
+    Array.prototype.forEach.call(links, function (link) {
       var isActive = link.getAttribute('data-nav') === active;
       link.classList.toggle('is-active', isActive);
       if (isActive) {

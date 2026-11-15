@@ -16,7 +16,7 @@
 
   /* ============================ 顶部与外壳 ============================ */
 
-  /** 刷新顶部的学习进度与错题徽标 */
+  /** 刷新顶部的学习进度与错题数量 */
   function refreshHeader() {
     if (!CL.data.state.loaded) return;
 
@@ -34,11 +34,6 @@
       badge.textContent = wrong.pending;
       badge.classList.toggle('is-zero', wrong.pending === 0);
       badge.setAttribute('aria-label', '待巩固错题 ' + wrong.pending + ' 道');
-    }
-
-    var moleculeBadge = U.$('#header-molecules');
-    if (moleculeBadge) {
-      moleculeBadge.textContent = CL.data.stats().molecules;
     }
   }
 
@@ -104,14 +99,9 @@
 
   /* ============================ 首页 ============================ */
 
-  /** 渲染首页 */
+  /** 渲染首页：首屏只保留 Hero，其他内容由独立页面承载 */
   function renderHome() {
     var root = U.$('#view-root');
-    var stats = CL.data.stats();
-    var readCount = CL.store.readCount();
-    var overall = U.percent(readCount, stats.points);
-    var attempt = CL.store.attemptStats();
-    var wrong = CL.store.wrongStats();
 
     // 找到第一个未学习的知识点，作为“继续学习”入口
     var nextPoint = null;
@@ -124,30 +114,26 @@
     }
 
     var continueHref = nextPoint ? '#/knowledge/' + nextPoint.id : '#/chapters';
-    var continueLabel = nextPoint ? '继续学习：' + nextPoint.title : '全部知识点已学完，去复习';
+    var hasProgress = CL.store.readCount() > 0;
+    var continueLabel = hasProgress
+      ? (nextPoint ? '继续学习' : '去复习')
+      : '开始学习';
 
     var heroHtml =
       '<section class="hero">' +
       '<div class="hero__content">' +
-      '<p class="eyebrow">AP Chemistry · 学练一体</p>' +
+      '<p class="eyebrow">AP CHEMISTRY · 学练一体</p>' +
       '<h1 class="hero__title">把抽象的化学结构<br><em>看懂、练会、记住</em></h1>' +
-      '<p class="hero__desc">5 个 AP 化学章节、' + stats.points + ' 个知识点、' + stats.questions +
-      ' 道练习、' + stats.molecules + ' 个可旋转的 3D 分子模型。讲解细、能练习、能纠错、能可视化。</p>' +
+      '<p class="hero__desc">专为 AP 化学打造的可视化学习平台，提供 3D 分子模型与针对性练习。</p>' +
       '<div class="hero__actions">' +
       '<a class="btn btn--primary btn--lg" href="' + continueHref + '">' + U.escapeHtml(continueLabel) + '</a>' +
-      '<a class="btn btn--ghost btn--lg" href="#/molecule">打开 3D 分子</a>' +
-      '</div>' +
-      '<div class="hero__stats">' +
-      '<div><strong>' + stats.chapters + '</strong><span>章节</span></div>' +
-      '<div><strong>' + stats.points + '</strong><span>知识点</span></div>' +
-      '<div><strong>' + stats.questions + '</strong><span>练习</span></div>' +
-      '<div><strong>' + stats.molecules + '</strong><span>3D 分子</span></div>' +
+      '<a class="hero__link" href="#/molecule">打开 3D 分子 →</a>' +
       '</div>' +
       '</div>' +
       '<div class="hero__visual">' +
       '<figure class="hero__figure">' +
       '<div class="hero__figure-canvas">' +
-      '<svg viewBox="0 0 360 300" role="img" aria-label="水分子 H2O 的结构示意图">' +
+      '<svg viewBox="55 40 250 210" role="img" aria-label="水分子 H2O 的结构示意图">' +
       '<line x1="128" y1="117" x2="168" y2="150" stroke="#b6bcc4" stroke-width="7"/>' +
       '<line x1="253" y1="124" x2="200" y2="152" stroke="#b6bcc4" stroke-width="7"/>' +
       '<circle cx="180" cy="170" r="52" fill="#c0392b" stroke="#8f2a20" stroke-width="2"/>' +
@@ -156,130 +142,16 @@
       '<text x="112" y="105" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="19" fill="#374151">H</text>' +
       '<circle cx="272" cy="110" r="30" fill="#f9fafb" stroke="#9ca3af" stroke-width="2"/>' +
       '<text x="272" y="119" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="19" fill="#374151">H</text>' +
-      '<path d="M135 122 A 62 62 0 0 1 236 132" fill="none" stroke="#007a87" stroke-width="1.4" stroke-dasharray="4 4"/>' +
-      '<text x="187" y="110" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="11" fill="#007a87">104.5°</text>' +
       '</svg>' +
       '</div>' +
-      '<figcaption class="hero__caption">' +
-      '<span>H₂O · 104.5° · sp³</span>' +
-      '<span class="hero__caption-note">FIG. 1 / STRUCTURE</span>' +
-      '</figcaption>' +
+      '<figcaption class="hero__caption">H₂O · 104.5° · sp³</figcaption>' +
       '</figure>' +
       '</div>' +
       '</section>';
 
-    var dashboardHtml =
-      '<section class="dashboard">' +
-      '<article class="dashboard__card dashboard__card--progress">' +
-      '<div class="dashboard__head"><h2>学习进度</h2><span class="dashboard__unit">PROGRESS</span></div>' +
-      '<p class="dashboard__figure">' + overall + '<small>%</small></p>' +
-      '<div class="meter" role="progressbar" aria-label="总体学习进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + overall + '">' +
-      '<span class="meter__fill" style="width:' + overall + '%"></span>' +
-      '</div>' +
-      '<p class="dashboard__meta">已学完 <strong>' + readCount + '</strong> / ' + stats.points + ' 个知识点</p>' +
-      '<a class="text-link" href="#/chapters">查看章节 →</a>' +
-      '</article>' +
-      '<article class="dashboard__card">' +
-      '<span class="dashboard__icon" aria-hidden="true">' + U.icon('pen') + '</span>' +
-      '<div class="dashboard__head"><h2>练习正确率</h2><span class="dashboard__unit">ACCURACY</span></div>' +
-      '<p class="dashboard__figure">' + attempt.accuracy + '<small>%</small></p>' +
-      '<p class="dashboard__meta">累计作答 <strong>' + attempt.total + '</strong> 次</p>' +
-      '<a class="text-link" href="#/quiz">继续练习 →</a>' +
-      '</article>' +
-      '<article class="dashboard__card">' +
-      '<span class="dashboard__icon" aria-hidden="true">' + U.icon('list') + '</span>' +
-      '<div class="dashboard__head"><h2>待巩固错题</h2><span class="dashboard__unit">REVIEW</span></div>' +
-      '<p class="dashboard__figure">' + wrong.pending + '<small>道</small></p>' +
-      '<p class="dashboard__meta">已掌握 <strong>' + wrong.mastered + '</strong> 道</p>' +
-      '<a class="text-link" href="#/wrongbook">打开错题集 →</a>' +
-      '</article>' +
-      '</section>';
-
-    var chapterCards = CL.data.chapters().map(function (chapter) {
-      var chapterPoints = CL.data.pointsOf(chapter.id);
-      var progress = CL.store.chapterProgress(chapter.id, chapterPoints);
-      return '<a class="mini-chapter" href="#/chapter/' + chapter.id + '" style="--chapter-color:' + chapter.color + '">' +
-        '<span class="mini-chapter__icon" aria-hidden="true">' +
-        (chapter.index < 10 ? '0' : '') + chapter.index + '</span>' +
-        '<span class="mini-chapter__body">' +
-        '<strong>' + U.escapeHtml(chapter.title) + '</strong>' +
-        '<span class="mini-chapter__meta">' + progress.read + '/' + progress.total + ' 知识点 · ' +
-        CL.store.chapterStats(chapter.id).accuracy + '% 正确率</span>' +
-        '</span>' +
-        '<span class="mini-chapter__percent">' + progress.percent + '%</span>' +
-        '</a>';
-    }).join('');
-
-    var recentWrong = CL.store.getWrongList({ status: 'pending', limit: 3 });
-    var wrongHtml = recentWrong.length
-      ? recentWrong.map(function (item) {
-        var question = CL.data.question(item.questionId) || item.question;
-        return '<li class="home-wrong-item">' +
-          '<a href="#/wrongbook">' +
-          U.escapeHtml(U.truncate(question ? question.question : item.questionId, 52)) +
-          '</a>' +
-          '<span class="muted">答错 ' + item.wrongCount + ' 次</span>' +
-          '</li>';
-      }).join('')
-      : '<li class="home-wrong-item home-wrong-item--empty">还没有错题，保持下去！</li>';
-
-    var pathHtml =
-      '<ol class="path-list">' +
-      '<li><span class="path-index">1</span><div><strong>读讲解</strong>' +
-      '<p>先看定义与细致讲解，再对照例子推导一遍，最后扫一遍易错点与小结。</p></div></li>' +
-      '<li><span class="path-index">2</span><div><strong>做练习</strong>' +
-      '<p>每章 9 道题，提交后立即查看解析，弄清每一步为什么对、为什么错。</p></div></li>' +
-      '<li><span class="path-index">3</span><div><strong>清错题</strong>' +
-      '<p>错题自动入库。回到对应知识点复习，再重做，直到标记为“已掌握”。</p></div></li>' +
-      '<li><span class="path-index">4</span><div><strong>看结构</strong>' +
-      '<p>用 3D 分子旋转、缩放，把 VSEPR、杂化与极性真正“看见”。</p></div></li>' +
-      '</ol>';
-
-    var featureHtml =
-      '<div class="feature-grid">' +
-      '<a class="feature-card" href="#/chapters"><span class="feature-card__icon" aria-hidden="true">' + U.icon('book') + '</span>' +
-      '<h3>知识讲解</h3><p>定义、细致讲解、举例、易错点、小结卡片，一个都不少。</p></a>' +
-      '<a class="feature-card" href="#/quiz"><span class="feature-card__icon" aria-hidden="true">' + U.icon('pen') + '</span>' +
-      '<h3>课后练习</h3><p>单选、判断、填空三种题型，即时判分，解析详细。</p></a>' +
-      '<a class="feature-card" href="#/wrongbook"><span class="feature-card__icon" aria-hidden="true">' + U.icon('list') + '</span>' +
-      '<h3>错题集</h3><p>自动收集、按章分组、支持重做与一键巩固，localStorage 持久化。</p></a>' +
-      '<a class="feature-card" href="#/molecule"><span class="feature-card__icon" aria-hidden="true">' + U.icon('atom') + '</span>' +
-      '<h3>3D 分子</h3><p>' + stats.molecules + ' 个分子模型，支持旋转、缩放与原子悬停提示。</p></a>' +
-      '<a class="feature-card" href="#/tools"><span class="feature-card__icon" aria-hidden="true">' + U.icon('scale') + '</span>' +
-      '<h3>辅助工具</h3><p>配平助手、物质识别、摩尔质量计算，练习时随用随查。</p></a>' +
-      '</div>';
-
     root.innerHTML =
       '<section class="page page--home">' +
       heroHtml +
-      dashboardHtml +
-
-      '<section class="home-section">' +
-      '<div class="section-head">' +
-      '<h2 class="section-title">章节速览</h2>' +
-      '<a class="text-link" href="#/chapters">全部章节 →</a>' +
-      '</div>' +
-      '<div class="mini-chapter-grid">' + chapterCards + '</div>' +
-      '</section>' +
-
-      '<section class="home-section home-section--split">' +
-      '<div class="home-panel">' +
-      '<h2 class="section-title">学习路径</h2>' + pathHtml +
-      '</div>' +
-      '<div class="home-panel">' +
-      '<h2 class="section-title">最近错题</h2>' +
-      '<ul class="home-wrong-list">' + wrongHtml + '</ul>' +
-      '<div class="home-panel__actions">' +
-      '<a class="btn btn--primary btn--sm" href="#/quiz/consolidate">一键巩固错题</a>' +
-      '<a class="btn btn--ghost btn--sm" href="#/wrongbook">查看全部</a>' +
-      '</div>' +
-      '</div>' +
-      '</section>' +
-
-      '<section class="home-section">' +
-      '<h2 class="section-title">五个模块，一个闭环</h2>' +
-      featureHtml +
-      '</section>' +
       '</section>';
 
     CL.router.setTitle('首页');

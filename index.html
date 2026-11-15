@@ -38,19 +38,16 @@
         <a href="#/home" data-nav="home">首页</a>
         <a href="#/chapters" data-nav="chapters">章节学习</a>
         <a href="#/quiz" data-nav="quiz">练习</a>
-        <a href="#/wrongbook" data-nav="wrongbook">
-          错题集
-          <span class="nav-badge" id="wrong-badge">0</span>
-        </a>
-        <a href="#/molecule" data-nav="molecule" class="nav-highlight">
-          3D 分子
-          <span class="nav-badge nav-badge--soft" id="header-molecules">0</span>
-        </a>
+        <a href="#/molecule" data-nav="molecule">3D 分子</a>
         <a href="#/tools" data-nav="tools">工具</a>
       </nav>
 
       <div class="header-meta">
-        <span class="progress-pill" id="header-progress">已学 0 / 0</span>
+        <a class="header-meta__link" href="#/wrongbook" data-nav="wrongbook">
+          错题集 <span class="header-meta__count is-zero" id="wrong-badge">0</span>
+        </a>
+        <span class="header-meta__divider" aria-hidden="true"></span>
+        <span class="header-meta__progress" id="header-progress">已学 0 / 0</span>
       </div>
     </div>
   </header>

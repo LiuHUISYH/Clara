@@ -105,56 +105,50 @@
   color: var(--text);
 }
 
-.nav-highlight {
-  border: 0;
-  font-weight: 700;
-}
-
-.nav-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-  border-radius: var(--radius-sm);
-  background: var(--danger);
-  color: #fff;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.nav-badge.is-zero {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--muted);
-}
-
-.nav-badge--soft {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-}
-
 .header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
   flex: none;
 }
 
-.progress-pill {
+.header-meta__link {
   display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
-  padding: 0 0 0 1rem;
-  border: 0;
-  border-left: 1px solid var(--border);
-  border-radius: 0;
-  background: none;
+  align-items: baseline;
+  gap: 0.25rem;
   color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: color var(--transition);
+}
+
+.header-meta__link:hover,
+.header-meta__link.is-active {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.header-meta__count {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.header-meta__count.is-zero {
+  display: none;
+}
+
+.header-meta__divider {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+}
+
+.header-meta__progress {
   font-family: var(--font-mono);
   font-size: 0.72rem;
-  font-weight: 500;
+  color: var(--muted);
   letter-spacing: 0.02em;
 }
 
@@ -379,19 +373,6 @@
 
 /* ============================ 栅格 ============================ */
 
-.dashboard {
-  display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr;
-  gap: 1rem;
-  margin: 1.6rem 0 2.4rem;
-}
-
-.mini-chapter-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-}
-
 .chapter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -411,12 +392,6 @@
   margin-bottom: 2rem;
 }
 
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
 .molecule-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
@@ -433,14 +408,6 @@
 /* ============================ 响应式 ============================ */
 
 @media (max-width: 1080px) {
-  .dashboard {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .dashboard__card--progress {
-    grid-column: 1 / -1;
-  }
-
   .molecule-layout {
     grid-template-columns: 1fr;
   }
@@ -529,10 +496,6 @@
   .header-meta {
     display: none;
   }
-
-  .mini-chapter-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 620px) {
@@ -544,13 +507,8 @@
     padding-top: 1.4rem;
   }
 
-  .dashboard {
-    grid-template-columns: 1fr;
-  }
-
   .chapter-grid,
-  .quiz-chapter-grid,
-  .feature-grid {
+  .quiz-chapter-grid {
     grid-template-columns: 1fr;
   }
 
