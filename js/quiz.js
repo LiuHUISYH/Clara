@@ -91,7 +91,8 @@
 
       return '<article class="quiz-chapter-card" style="--chapter-color:' + chapter.color + '">' +
         '<div class="quiz-chapter-card__head">' +
-        '<span class="quiz-chapter-card__icon" aria-hidden="true">' + chapter.icon + '</span>' +
+        '<span class="quiz-chapter-card__icon" aria-hidden="true">' +
+        (chapter.index < 10 ? '0' : '') + chapter.index + '</span>' +
         '<div>' +
         '<h3>' + U.escapeHtml(chapter.title) + '</h3>' +
         '<p class="muted">' + U.escapeHtml(chapter.titleEn) + '</p>' +
@@ -123,17 +124,17 @@
 
       '<div class="quiz-quick">' +
       '<button class="quick-card" id="start-random" type="button">' +
-      '<span class="quick-card__icon">🎲</span>' +
+      '<span class="quick-card__icon" aria-hidden="true">' + U.icon('shuffle') + '</span>' +
       '<span class="quick-card__title">随机练习 10 题</span>' +
       '<span class="quick-card__desc">从全部 ' + CL.data.stats().questions + ' 道题中随机抽取，检验综合水平</span>' +
       '</button>' +
       '<button class="quick-card" id="start-consolidate" type="button">' +
-      '<span class="quick-card__icon">🔁</span>' +
+      '<span class="quick-card__icon" aria-hidden="true">' + U.icon('refresh') + '</span>' +
       '<span class="quick-card__title">错题再次巩固</span>' +
       '<span class="quick-card__desc">当前有 ' + wrong.pending + ' 道待巩固错题，随机抽取重练</span>' +
       '</button>' +
       '<a class="quick-card" href="#/wrongbook">' +
-      '<span class="quick-card__icon">📕</span>' +
+      '<span class="quick-card__icon" aria-hidden="true">' + U.icon('list') + '</span>' +
       '<span class="quick-card__title">打开错题集</span>' +
       '<span class="quick-card__desc">按章节查看错题、重做与标记已掌握</span>' +
       '</a>' +
@@ -453,7 +454,8 @@
       var isRight = !!result;
       feedbackHtml = '<div class="feedback ' + (isRight ? 'feedback--correct' : 'feedback--wrong') + '">' +
         '<div class="feedback__head">' +
-        '<span class="feedback__icon">' + (isRight ? '✅' : '❌') + '</span>' +
+        '<span class="feedback__icon" aria-hidden="true">' +
+        U.icon(isRight ? 'check' : 'x') + '</span>' +
         '<strong>' + (isRight ? '回答正确！' : '回答错误') + '</strong>' +
         '</div>' +
         '<div class="feedback__row">' +
@@ -461,12 +463,12 @@
         '<span>正确答案：' + U.escapeHtml(correctAnswerText(question)) + '</span>' +
         '</div>' +
         '<div class="feedback__block">' +
-        '<h4>📖 详细解析</h4>' +
+        '<h4>详细解析</h4>' +
         '<p>' + U.escapeHtml(question.explanation) + '</p>' +
         '</div>' +
         (!isRight && question.wrongAnalysis ?
           '<div class="feedback__block feedback__block--warn">' +
-          '<h4>🔎 错因分析</h4>' +
+          '<h4>错因分析</h4>' +
           '<p>' + U.escapeHtml(question.wrongAnalysis) + '</p>' +
           '</div>' : '') +
         (knowledge ?
@@ -624,7 +626,7 @@
       '<section class="page page--result">' +
       '<header class="result-head">' +
       '<div class="result-ring ' + resultClass + '">' +
-      U.progressRing(accuracy, { size: 132, stroke: 10, color: accuracy >= 80 ? '#10b981' : (accuracy >= 60 ? '#f59e0b' : '#ef4444') }) +
+      U.progressRing(accuracy, { size: 132, stroke: 10, color: accuracy >= 80 ? '#0f7b4f' : (accuracy >= 60 ? '#8a5a00' : '#b3261e') }) +
       '</div>' +
       '<div class="result-head__text">' +
       '<span class="eyebrow">练习完成</span>' +

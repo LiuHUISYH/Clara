@@ -15,9 +15,9 @@
   var U = CL.utils;
 
   var TABS = [
-    { id: 'balance', label: '方程式配平', icon: '⚖️' },
-    { id: 'identify', label: '物质识别', icon: '🔎' },
-    { id: 'molar', label: '摩尔质量', icon: '🧮' }
+    { id: 'balance', label: '方程式配平', icon: 'scale' },
+    { id: 'identify', label: '物质识别', icon: 'search' },
+    { id: 'molar', label: '摩尔质量', icon: 'calculator' }
   ];
 
   var currentTab = 'balance';
@@ -43,7 +43,7 @@
       TABS.map(function (tab) {
         return '<button type="button" class="tabs__btn' + (tab.id === currentTab ? ' is-active' : '') +
           '" role="tab" aria-selected="' + (tab.id === currentTab) + '" data-tab="' + tab.id + '">' +
-          '<span aria-hidden="true">' + tab.icon + '</span> ' + tab.label + '</button>';
+          '<span aria-hidden="true">' + U.icon(tab.icon) + '</span> ' + tab.label + '</button>';
       }).join('') +
       '</nav>' +
       '<div id="tool-panel" class="tool-panel"></div>' +
@@ -305,7 +305,7 @@
 
     panel.innerHTML =
       '<div class="tool-card">' +
-      '<h2 class="tool-card__title">⚖️ 方程式配平助手</h2>' +
+      '<h2 class="tool-card__title">方程式配平助手</h2>' +
       '<p class="tool-card__desc">输入未配平的化学方程式，工具会用线性代数方法求出最简整数系数，并给出配平步骤与验算表。支持 “->”“→”“=” 三种箭头写法。</p>' +
       '<form class="tool-form" id="balance-form" autocomplete="off">' +
       '<input id="balance-input" class="tool-input" type="text" placeholder="例如：Fe + O2 -> Fe2O3" value="H2 + O2 -> H2O" aria-label="输入未配平方程式">' +
@@ -321,7 +321,7 @@
       '</div>' +
 
       '<div class="tool-card tool-card--library">' +
-      '<h3 class="tool-card__title">📚 内置例题（' + library.length + ' 组，含分步解析）</h3>' +
+      '<h3 class="tool-card__title">内置例题（' + library.length + ' 组，含分步解析）</h3>' +
       '<div class="equation-list">' +
       library.map(function (item) {
         return '<button type="button" class="equation-item" data-library="' + item.id + '">' +
@@ -367,7 +367,7 @@
     if (!box) return;
 
     if (!result || result.error) {
-      box.innerHTML = '<div class="tool-error">⚠️ ' +
+      box.innerHTML = '<div class="tool-error">' + U.icon('alert') + ' ' +
         U.escapeHtml(result ? result.error : '未知错误') + '</div>';
       return;
     }
@@ -568,7 +568,7 @@
 
     panel.innerHTML =
       '<div class="tool-card">' +
-      '<h2 class="tool-card__title">🔎 物质识别小工具</h2>' +
+      '<h2 class="tool-card__title">物质识别小工具</h2>' +
       '<p class="tool-card__desc">输入物质名称或化学式，快速判断它属于离子化合物、共价化合物还是单质，并给出键型、极性、分子间作用力与结构说明。</p>' +
       '<form class="tool-form" id="identify-form" autocomplete="off">' +
       '<input id="identify-input" class="tool-input" type="text" placeholder="例如：食盐、CO2、NH3、MgO" value="水" aria-label="输入物质名称或化学式">' +
@@ -608,7 +608,7 @@
     if (!box) return;
 
     if (!result || result.error) {
-      box.innerHTML = '<div class="tool-error">⚠️ ' +
+      box.innerHTML = '<div class="tool-error">' + U.icon('alert') + ' ' +
         U.escapeHtml(result ? result.error : '未知错误') + '</div>';
       return;
     }
@@ -732,7 +732,7 @@
 
     panel.innerHTML =
       '<div class="tool-card">' +
-      '<h2 class="tool-card__title">🧮 摩尔质量计算器</h2>' +
+      '<h2 class="tool-card__title">摩尔质量计算器</h2>' +
       '<p class="tool-card__desc">输入化学式，计算摩尔质量并查看各元素的质量贡献。支持括号与结晶水，例如 Ca(OH)2、CuSO4·5H2O。</p>' +
       '<form class="tool-form" id="molar-form" autocomplete="off">' +
       '<input id="molar-input" class="tool-input" type="text" placeholder="例如：CuSO4·5H2O" value="H2O" aria-label="输入化学式">' +
@@ -772,7 +772,7 @@
     if (!box) return;
 
     if (!result || result.error) {
-      box.innerHTML = '<div class="tool-error">⚠️ ' +
+      box.innerHTML = '<div class="tool-error">' + U.icon('alert') + ' ' +
         U.escapeHtml(result ? result.error : '未知错误') + '</div>';
       return;
     }

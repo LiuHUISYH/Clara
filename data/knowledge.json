@@ -13,8 +13,7 @@
       "title": "化学键基本概念",
       "titleEn": "Basic Concepts of Chemical Bonding",
       "description": "从离子键、共价键到 Lewis 结构与键能，建立“原子为什么结合、怎样结合”的底层框架。",
-      "icon": "🔗",
-      "color": "#4f7cff",
+      "color": "#0f5e6b",
       "examWeight": "高频（选择题 + 结构推断）"
     },
     {
@@ -23,8 +22,7 @@
       "title": "分子几何与成键理论",
       "titleEn": "Molecular Geometry & Bonding Theories",
       "description": "用 VSEPR、杂化轨道与分子轨道理论预测分子形状、键角与极性。",
-      "icon": "📐",
-      "color": "#8b5cf6",
+      "color": "#1f3a5f",
       "examWeight": "核心（FRQ 常考）"
     },
     {
@@ -33,8 +31,7 @@
       "title": "液体与分子间作用力",
       "titleEn": "Liquids & Intermolecular Forces",
       "description": "色散力、偶极作用、氢键如何决定沸点、蒸气压、黏度与表面张力。",
-      "icon": "💧",
-      "color": "#06b6d4",
+      "color": "#4a5d70",
       "examWeight": "高频（性质比较题）"
     },
     {
@@ -43,8 +40,7 @@
       "title": "固体与现代材料",
       "titleEn": "Solids & Modern Materials",
       "description": "离子晶体、分子晶体、共价网络与金属晶体，以及晶胞、能带与半导体。",
-      "icon": "💎",
-      "color": "#f59e0b",
+      "color": "#6b4f2a",
       "examWeight": "中高频（晶体性质判断）"
     },
     {
@@ -53,8 +49,7 @@
       "title": "溶液的性质",
       "titleEn": "Properties of Solutions",
       "description": "溶解过程、溶解度、浓度换算与依数性（沸点升高、凝固点降低、渗透压）。",
-      "icon": "🧪",
-      "color": "#10b981",
+      "color": "#3f5a3a",
       "examWeight": "高频（计算 + 图像题）"
     }
   ],

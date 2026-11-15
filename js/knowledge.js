@@ -55,7 +55,8 @@
 
       return '<article class="chapter-card" style="--chapter-color:' + chapter.color + '">' +
         '<div class="chapter-card__head">' +
-        '<span class="chapter-card__icon" aria-hidden="true">' + chapter.icon + '</span>' +
+        '<span class="chapter-card__icon" aria-hidden="true">' +
+        (chapter.index < 10 ? '0' : '') + chapter.index + '</span>' +
         '<span class="chapter-card__index">第 ' + U.cnNumber(chapter.index) + ' 章</span>' +
         '</div>' +
         '<h2 class="chapter-card__title">' + U.escapeHtml(chapter.title) + '</h2>' +
@@ -67,7 +68,11 @@
         '<span class="chip chip--soft">' + U.escapeHtml(chapter.examWeight) + '</span>' +
         '</div>' +
         '<div class="chapter-card__progress">' +
-        '<div class="chapter-card__ring">' + U.progressRing(progress.percent, { size: 62, color: chapter.color }) + '</div>' +
+        '<div class="chapter-card__stat">' +
+        '<span class="chapter-card__percent">' + progress.percent + '%</span>' +
+        '<span class="meter"><span class="meter__fill" style="width:' + progress.percent +
+        '%;background:' + chapter.color + '"></span></span>' +
+        '</div>' +
         '<div class="chapter-card__progress-text">' +
         '<span>已学 ' + progress.read + ' / ' + progress.total + ' 个知识点</span>' +
         '<span class="muted">练习正确率 ' + quizStats.accuracy + '%（' + quizStats.attempts + ' 次作答）</span>' +
@@ -92,7 +97,7 @@
       '<div class="stat-strip__item"><strong>' + attempt.accuracy + '%</strong><span>答题正确率</span></div>' +
       '</div>' +
       '<div class="search-bar">' +
-      '<span class="search-bar__icon" aria-hidden="true">🔍</span>' +
+      '<span class="search-bar__icon" aria-hidden="true">' + U.icon('search') + '</span>' +
       '<input id="knowledge-search" type="search" placeholder="搜索知识点，例如：氢键、VSEPR、依数性……" autocomplete="off" aria-label="搜索知识点">' +
       '<button class="btn btn--ghost btn--sm" id="search-clear" type="button" hidden>清除</button>' +
       '</div>' +
@@ -165,7 +170,7 @@
 
     if (!chapter) {
       root.innerHTML = '<section class="page"><div class="empty-state">' +
-        '<div class="empty-state__icon">🔍</div><h2>没有找到该章节</h2>' +
+        '<div class="empty-state__icon">' + U.icon('search') + '</div><h2>没有找到该章节</h2>' +
         '<p>请检查链接是否正确，或返回章节列表重新选择。</p>' +
         '<a class="btn btn--primary" href="#/chapters">返回章节列表</a></div></section>';
       return;
@@ -207,7 +212,8 @@
         { label: chapter.title }
       ]) +
       '<header class="chapter-hero">' +
-      '<div class="chapter-hero__icon" aria-hidden="true">' + chapter.icon + '</div>' +
+      '<div class="chapter-hero__icon" aria-hidden="true">' +
+      (chapter.index < 10 ? '0' : '') + chapter.index + '</div>' +
       '<div class="chapter-hero__text">' +
       '<span class="chapter-hero__index">第 ' + U.cnNumber(chapter.index) + ' 章 · ' + U.escapeHtml(chapter.examWeight) + '</span>' +
       '<h1>' + U.escapeHtml(chapter.title) + '</h1>' +
@@ -215,7 +221,9 @@
       '<p class="chapter-hero__desc">' + U.escapeHtml(chapter.description) + '</p>' +
       '</div>' +
       '<div class="chapter-hero__progress">' +
-      U.progressRing(progress.percent, { size: 92, stroke: 8, color: chapter.color }) +
+      '<span class="chapter-hero__percent">' + progress.percent + '%</span>' +
+      '<span class="meter chapter-hero__meter"><span class="meter__fill" style="width:' +
+      progress.percent + '%;background:' + chapter.color + '"></span></span>' +
       '<span>已学 ' + progress.read + ' / ' + progress.total + '</span>' +
       '</div>' +
       '</header>' +
@@ -244,7 +252,7 @@
 
     if (!point) {
       root.innerHTML = '<section class="page"><div class="empty-state">' +
-        '<div class="empty-state__icon">📘</div><h2>没有找到该知识点</h2>' +
+        '<div class="empty-state__icon">' + U.icon('book') + '</div><h2>没有找到该知识点</h2>' +
         '<p>它可能已被移除，或链接有误。</p>' +
         '<a class="btn btn--primary" href="#/chapters">返回章节列表</a></div></section>';
       return;
@@ -277,7 +285,8 @@
     }).join('');
 
     var pitfallsHtml = (point.pitfalls || []).map(function (item) {
-      return '<li class="pitfall-item"><span class="pitfall-item__icon" aria-hidden="true">⚠️</span>' +
+      return '<li class="pitfall-item"><span class="pitfall-item__icon" aria-hidden="true">' +
+        U.icon('alert') + '</span>' +
         '<span>' + U.escapeHtml(item) + '</span></li>';
     }).join('');
 
@@ -291,7 +300,7 @@
     }).join('');
 
     root.innerHTML =
-      '<section class="page page--knowledge" style="--chapter-color:' + (chapter ? chapter.color : '#4f7cff') + '">' +
+      '<section class="page page--knowledge" style="--chapter-color:' + (chapter ? chapter.color : '#007a87') + '">' +
       breadcrumb([
         { label: '首页', href: '#/home' },
         { label: '章节学习', href: '#/chapters' },
@@ -300,7 +309,7 @@
       ]) +
       '<header class="knowledge-head">' +
       '<div class="knowledge-head__meta">' +
-      '<span class="pill" style="background:' + (chapter ? chapter.color : '#4f7cff') + '22;color:' + (chapter ? chapter.color : '#4f7cff') + '">' +
+      '<span class="pill" style="background:' + (chapter ? chapter.color : '#007a87') + '22;color:' + (chapter ? chapter.color : '#007a87') + '">' +
       (chapter ? U.escapeHtml(chapter.title) : '') + '</span>' +
       '<span class="chip">第 ' + (index + 1) + ' / ' + siblings.length + ' 个知识点</span>' +
       (isRead ? '<span class="chip chip--success">✓ 已记录学习</span>' : '') +
@@ -311,28 +320,28 @@
       '</header>' +
 
       '<section class="content-block content-block--definition">' +
-      '<h2 class="content-block__title">📌 定义</h2>' +
+      '<h2 class="content-block__title">定义</h2>' +
       '<p class="definition-cn">' + U.escapeHtml(point.definition.cn) + '</p>' +
       '<p class="definition-en" lang="en">' + U.escapeHtml(point.definition.en) + '</p>' +
       '</section>' +
 
       '<section class="content-block">' +
-      '<h2 class="content-block__title">🧠 细致讲解</h2>' +
+      '<h2 class="content-block__title">细致讲解</h2>' +
       '<div class="prose">' + explanationHtml + '</div>' +
       '</section>' +
 
       '<section class="content-block">' +
-      '<h2 class="content-block__title">🔬 举例分析</h2>' +
+      '<h2 class="content-block__title">举例分析</h2>' +
       examplesHtml +
       '</section>' +
 
       '<section class="content-block content-block--pitfalls">' +
-      '<h2 class="content-block__title">⚠️ 易错点提示</h2>' +
+      '<h2 class="content-block__title">易错点提示</h2>' +
       '<ul class="pitfall-list">' + pitfallsHtml + '</ul>' +
       '</section>' +
 
       '<section class="content-block">' +
-      '<h2 class="content-block__title">🗂️ 小结卡片</h2>' +
+      '<h2 class="content-block__title">小结卡片</h2>' +
       '<div class="summary-grid">' + summaryHtml + '</div>' +
       '</section>' +
 

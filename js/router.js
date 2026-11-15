@@ -139,7 +139,7 @@
       if (outlet) {
         outlet.innerHTML =
           '<section class="page"><div class="empty-state">' +
-          '<div class="empty-state__icon">⚠️</div>' +
+          '<div class="empty-state__icon">' + CL.utils.icon('alert') + '</div>' +
           '<h2>页面渲染出错</h2>' +
           '<p>' + CL.utils.escapeHtml(error.message || String(error)) + '</p>' +
           '<a class="btn btn--primary" href="#/home">返回首页</a>' +

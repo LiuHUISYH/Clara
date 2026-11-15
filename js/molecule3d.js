@@ -351,7 +351,7 @@
 
       '<form class="molecule-search" id="molecule-form" autocomplete="off">' +
       '<div class="molecule-search__field">' +
-      '<span class="molecule-search__icon" aria-hidden="true">🧬</span>' +
+      '<span class="molecule-search__icon" aria-hidden="true">' + U.icon('search') + '</span>' +
       '<input id="molecule-input" type="text" placeholder="输入化学式或名称，例如 H2O、甲烷、食盐、苯…" aria-label="输入化学式或物质名称">' +
       '</div>' +
       '<button class="btn btn--primary" type="submit">生成 3D</button>' +
@@ -372,12 +372,12 @@
       '<div class="canvas-badge" id="canvas-badge"></div>' +
       '<div class="atom-tooltip" id="atom-tooltip" hidden></div>' +
       '<div class="canvas-controls">' +
-      '<button type="button" class="icon-btn" data-action="toggle-rotate" title="自动旋转" aria-label="自动旋转">⟳</button>' +
+      '<button type="button" class="icon-btn" data-action="toggle-rotate" title="自动旋转" aria-label="自动旋转">' + U.icon('rotate') + '</button>' +
       '<button type="button" class="icon-btn" data-action="toggle-labels" title="显示/隐藏元素符号" aria-label="显示或隐藏元素符号">A</button>' +
       '<button type="button" class="icon-btn" data-action="zoom-in" title="放大" aria-label="放大">+</button>' +
       '<button type="button" class="icon-btn" data-action="zoom-out" title="缩小" aria-label="缩小">−</button>' +
-      '<button type="button" class="icon-btn" data-action="reset" title="重置视角" aria-label="重置视角">⤾</button>' +
-      '<button type="button" class="icon-btn" data-action="download" title="保存图片" aria-label="保存图片">⭳</button>' +
+      '<button type="button" class="icon-btn" data-action="reset" title="重置视角" aria-label="重置视角">' + U.icon('reset') + '</button>' +
+      '<button type="button" class="icon-btn" data-action="download" title="保存图片" aria-label="保存图片">' + U.icon('download') + '</button>' +
       '</div>' +
       '<div class="canvas-hint">拖拽旋转 · 滚轮缩放 · 双击复位</div>' +
       '</div>' +

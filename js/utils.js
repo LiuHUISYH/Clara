@@ -204,12 +204,16 @@
     var root = $('#toast-root');
     if (!root) return;
 
-    var icons = { info: 'ℹ️', success: '✅', warn: '⚠️', error: '❌' };
+    var icons = { info: 'compass', success: 'check', warn: 'alert', error: 'x' };
+    var iconName = icons[type || 'info'] || icons.info;
+    var iconNode = el('span', { class: 'toast__icon' });
+    iconNode.innerHTML = icon(iconName);
+
     var node = el('div', {
       class: 'toast toast--' + (type || 'info'),
       role: 'status'
     }, [
-      el('span', { class: 'toast__icon', text: icons[type || 'info'] || icons.info }),
+      iconNode,
       el('span', { class: 'toast__text', text: message })
     ]);
 
@@ -357,6 +361,41 @@
     });
   }
 
+  /* ============================ 线性图标 ============================ */
+
+  /**
+   * 极简线性图标（Lucide/Heroicons 风格）
+   * 统一 24×24 视图框、1.6px 描边、无填充，颜色继承 currentColor。
+   */
+  var ICON_PATHS = {
+    book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+    pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
+    atom: '<circle cx="12" cy="12" r="1.4"/><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(120 12 12)"/>',
+    flask: '<path d="M9 3h6"/><path d="M10 3v6l-5.2 9.1A1.8 1.8 0 0 0 6.4 21h11.2a1.8 1.8 0 0 0 1.6-2.9L14 9V3"/><path d="M7.5 15h9"/>',
+    scale: '<path d="M12 3v18M7 21h10"/><path d="M5 7h14"/><path d="M7 7l-3 6h6L7 7zM17 7l-3 6h6l-3-6z"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+    alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    compass: '<circle cx="12" cy="12" r="9"/><path d="m16 8-2.4 5.6L8 16l2.4-5.6L16 8z"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 15.3-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16"/><path d="M3 21v-5h5"/>',
+    shuffle: '<path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="m4 4 5 5"/>',
+    calculator: '<rect x="4" y="2" width="16" height="20" rx="1"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h.01M16 19h.01"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/>',
+    rotate: '<path d="M21 12a9 9 0 1 1-3.2-6.9"/><path d="M21 3v6h-6"/>',
+    reset: '<path d="M3 3v6h6"/><path d="M3.6 9a9 9 0 1 1 1.9 9.4"/>',
+    download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>',
+    chapter: '<path d="M4 4h16v16H4z"/><path d="M8 4v16M4 10h4M4 16h4"/>'
+  };
+
+  /** 生成一个内联 SVG 图标 */
+  function icon(name, extraClass) {
+    var body = ICON_PATHS[name] || ICON_PATHS.book;
+    return '<svg class="icon' + (extraClass ? ' ' + extraClass : '') +
+      '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + body + '</svg>';
+  }
+
   /* ============================ 进度环 ============================ */
 
   /**
@@ -379,7 +418,7 @@
       '" fill="none" stroke-width="' + stroke + '"></circle>' +
       '<circle class="ring__fg" cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + radius +
       '" fill="none" stroke="' + color + '" stroke-width="' + stroke +
-      '" stroke-linecap="round" stroke-dasharray="' + circumference.toFixed(1) +
+      '" stroke-linecap="butt" stroke-dasharray="' + circumference.toFixed(1) +
       '" stroke-dashoffset="' + offset.toFixed(1) + '" transform="rotate(-90 ' + size / 2 + ' ' + size / 2 + ')"></circle>' +
       '<text x="50%" y="52%" text-anchor="middle" dominant-baseline="middle" class="ring__text">' + Math.round(value) + '%</text>' +
       '</svg>';
@@ -520,6 +559,7 @@
     closeModal: closeModal,
     confirmDialog: confirmDialog,
     progressRing: progressRing,
+    icon: icon,
     normalizeAnswer: normalizeAnswer,
     isAnswerMatch: isAnswerMatch,
     debounce: debounce,

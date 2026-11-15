@@ -129,8 +129,8 @@
     var heroHtml =
       '<section class="hero">' +
       '<div class="hero__content">' +
-      '<span class="eyebrow">AP Chemistry · 学练一体</span>' +
-      '<h1 class="hero__title">把抽象的化学结构<br><span>看懂、练会、记住</span></h1>' +
+      '<p class="eyebrow">AP Chemistry · 学练一体</p>' +
+      '<h1 class="hero__title">把抽象的化学结构<br><em>看懂、练会、记住</em></h1>' +
       '<p class="hero__desc">5 个 AP 化学章节、' + stats.points + ' 个知识点、' + stats.questions +
       ' 道练习、' + stats.molecules + ' 个可旋转的 3D 分子模型。讲解细、能练习、能纠错、能可视化。</p>' +
       '<div class="hero__actions">' +
@@ -144,55 +144,69 @@
       '<div><strong>' + stats.molecules + '</strong><span>3D 分子</span></div>' +
       '</div>' +
       '</div>' +
-      '<div class="hero__visual" aria-hidden="true">' +
-      '<div class="hero-orbit">' +
-      '<span class="hero-atom hero-atom--o">O</span>' +
-      '<span class="hero-atom hero-atom--h1">H</span>' +
-      '<span class="hero-atom hero-atom--h2">H</span>' +
-      '<span class="hero-bond hero-bond--1"></span>' +
-      '<span class="hero-bond hero-bond--2"></span>' +
+      '<div class="hero__visual">' +
+      '<figure class="hero__figure">' +
+      '<div class="hero__figure-canvas">' +
+      '<svg viewBox="0 0 360 300" role="img" aria-label="水分子 H2O 的结构示意图">' +
+      '<line x1="128" y1="117" x2="168" y2="150" stroke="#b6bcc4" stroke-width="7"/>' +
+      '<line x1="253" y1="124" x2="200" y2="152" stroke="#b6bcc4" stroke-width="7"/>' +
+      '<circle cx="180" cy="170" r="52" fill="#c0392b" stroke="#8f2a20" stroke-width="2"/>' +
+      '<text x="180" y="181" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="28" fill="#ffffff">O</text>' +
+      '<circle cx="112" cy="96" r="30" fill="#f9fafb" stroke="#9ca3af" stroke-width="2"/>' +
+      '<text x="112" y="105" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="19" fill="#374151">H</text>' +
+      '<circle cx="272" cy="110" r="30" fill="#f9fafb" stroke="#9ca3af" stroke-width="2"/>' +
+      '<text x="272" y="119" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="19" fill="#374151">H</text>' +
+      '<path d="M135 122 A 62 62 0 0 1 236 132" fill="none" stroke="#007a87" stroke-width="1.4" stroke-dasharray="4 4"/>' +
+      '<text x="187" y="110" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="11" fill="#007a87">104.5°</text>' +
+      '</svg>' +
       '</div>' +
-      '<p class="hero__caption">H₂O · 104.5° · sp³</p>' +
+      '<figcaption class="hero__caption">' +
+      '<span>H₂O · 104.5° · sp³</span>' +
+      '<span class="hero__caption-note">FIG. 1 / STRUCTURE</span>' +
+      '</figcaption>' +
+      '</figure>' +
       '</div>' +
       '</section>';
 
     var dashboardHtml =
       '<section class="dashboard">' +
-      '<div class="dashboard__card dashboard__card--progress">' +
-      U.progressRing(overall, { size: 96, stroke: 8 }) +
-      '<div>' +
-      '<h2>学习进度</h2>' +
-      '<p>已学完 <strong>' + readCount + '</strong> / ' + stats.points + ' 个知识点</p>' +
+      '<article class="dashboard__card dashboard__card--progress">' +
+      '<div class="dashboard__head"><h2>学习进度</h2><span class="dashboard__unit">PROGRESS</span></div>' +
+      '<p class="dashboard__figure">' + overall + '<small>%</small></p>' +
+      '<div class="meter" role="progressbar" aria-label="总体学习进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + overall + '">' +
+      '<span class="meter__fill" style="width:' + overall + '%"></span>' +
+      '</div>' +
+      '<p class="dashboard__meta">已学完 <strong>' + readCount + '</strong> / ' + stats.points + ' 个知识点</p>' +
       '<a class="text-link" href="#/chapters">查看章节 →</a>' +
-      '</div>' +
-      '</div>' +
-      '<div class="dashboard__card">' +
-      '<span class="dashboard__icon" aria-hidden="true">✍️</span>' +
-      '<h2>练习正确率</h2>' +
-      '<p><strong>' + attempt.accuracy + '%</strong> · 累计作答 ' + attempt.total + ' 次</p>' +
+      '</article>' +
+      '<article class="dashboard__card">' +
+      '<span class="dashboard__icon" aria-hidden="true">' + U.icon('pen') + '</span>' +
+      '<div class="dashboard__head"><h2>练习正确率</h2><span class="dashboard__unit">ACCURACY</span></div>' +
+      '<p class="dashboard__figure">' + attempt.accuracy + '<small>%</small></p>' +
+      '<p class="dashboard__meta">累计作答 <strong>' + attempt.total + '</strong> 次</p>' +
       '<a class="text-link" href="#/quiz">继续练习 →</a>' +
-      '</div>' +
-      '<div class="dashboard__card">' +
-      '<span class="dashboard__icon" aria-hidden="true">📕</span>' +
-      '<h2>待巩固错题</h2>' +
-      '<p><strong>' + wrong.pending + '</strong> 道 · 已掌握 ' + wrong.mastered + ' 道</p>' +
+      '</article>' +
+      '<article class="dashboard__card">' +
+      '<span class="dashboard__icon" aria-hidden="true">' + U.icon('list') + '</span>' +
+      '<div class="dashboard__head"><h2>待巩固错题</h2><span class="dashboard__unit">REVIEW</span></div>' +
+      '<p class="dashboard__figure">' + wrong.pending + '<small>道</small></p>' +
+      '<p class="dashboard__meta">已掌握 <strong>' + wrong.mastered + '</strong> 道</p>' +
       '<a class="text-link" href="#/wrongbook">打开错题集 →</a>' +
-      '</div>' +
+      '</article>' +
       '</section>';
 
     var chapterCards = CL.data.chapters().map(function (chapter) {
       var chapterPoints = CL.data.pointsOf(chapter.id);
       var progress = CL.store.chapterProgress(chapter.id, chapterPoints);
       return '<a class="mini-chapter" href="#/chapter/' + chapter.id + '" style="--chapter-color:' + chapter.color + '">' +
-        '<span class="mini-chapter__icon" aria-hidden="true">' + chapter.icon + '</span>' +
+        '<span class="mini-chapter__icon" aria-hidden="true">' +
+        (chapter.index < 10 ? '0' : '') + chapter.index + '</span>' +
         '<span class="mini-chapter__body">' +
         '<strong>' + U.escapeHtml(chapter.title) + '</strong>' +
         '<span class="mini-chapter__meta">' + progress.read + '/' + progress.total + ' 知识点 · ' +
         CL.store.chapterStats(chapter.id).accuracy + '% 正确率</span>' +
         '</span>' +
-        '<span class="mini-chapter__ring">' +
-        U.progressRing(progress.percent, { size: 44, stroke: 4, color: chapter.color }) +
-        '</span>' +
+        '<span class="mini-chapter__percent">' + progress.percent + '%</span>' +
         '</a>';
     }).join('');
 
@@ -223,15 +237,15 @@
 
     var featureHtml =
       '<div class="feature-grid">' +
-      '<a class="feature-card" href="#/chapters"><span class="feature-card__icon">📘</span>' +
+      '<a class="feature-card" href="#/chapters"><span class="feature-card__icon" aria-hidden="true">' + U.icon('book') + '</span>' +
       '<h3>知识讲解</h3><p>定义、细致讲解、举例、易错点、小结卡片，一个都不少。</p></a>' +
-      '<a class="feature-card" href="#/quiz"><span class="feature-card__icon">✍️</span>' +
+      '<a class="feature-card" href="#/quiz"><span class="feature-card__icon" aria-hidden="true">' + U.icon('pen') + '</span>' +
       '<h3>课后练习</h3><p>单选、判断、填空三种题型，即时判分，解析详细。</p></a>' +
-      '<a class="feature-card" href="#/wrongbook"><span class="feature-card__icon">📕</span>' +
+      '<a class="feature-card" href="#/wrongbook"><span class="feature-card__icon" aria-hidden="true">' + U.icon('list') + '</span>' +
       '<h3>错题集</h3><p>自动收集、按章分组、支持重做与一键巩固，localStorage 持久化。</p></a>' +
-      '<a class="feature-card" href="#/molecule"><span class="feature-card__icon">🧬</span>' +
+      '<a class="feature-card" href="#/molecule"><span class="feature-card__icon" aria-hidden="true">' + U.icon('atom') + '</span>' +
       '<h3>3D 分子</h3><p>' + stats.molecules + ' 个分子模型，支持旋转、缩放与原子悬停提示。</p></a>' +
-      '<a class="feature-card" href="#/tools"><span class="feature-card__icon">⚖️</span>' +
+      '<a class="feature-card" href="#/tools"><span class="feature-card__icon" aria-hidden="true">' + U.icon('scale') + '</span>' +
       '<h3>辅助工具</h3><p>配平助手、物质识别、摩尔质量计算，练习时随用随查。</p></a>' +
       '</div>';
 
@@ -351,7 +365,7 @@
       root.innerHTML =
         '<section class="page page--notfound">' +
         '<div class="empty-state">' +
-        '<div class="empty-state__icon">🧭</div>' +
+        '<div class="empty-state__icon">' + U.icon('compass') + '</div>' +
         '<h1>页面走丢了</h1>' +
         '<p>找不到路径 <code>#' + U.escapeHtml(parsed.path) + '</code>，它可能已被移动或删除。</p>' +
         '<div class="empty-state__actions">' +
@@ -373,7 +387,7 @@
     root.innerHTML =
       '<section class="page">' +
       '<div class="empty-state">' +
-      '<div class="empty-state__icon">⚠️</div>' +
+      '<div class="empty-state__icon">' + U.icon('alert') + '</div>' +
       '<h1>数据加载失败</h1>' +
       '<p>' + U.escapeHtml(error && error.message ? error.message : String(error)) + '</p>' +
       '<p class="muted">如果你直接双击打开了 index.html，请确认 data/ 目录下的 .js 数据文件存在；' +

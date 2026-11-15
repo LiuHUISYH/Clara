@@ -1,56 +1,62 @@
 /* ==================================================================
    base.css —— 设计变量、重置样式、排版与通用组件
    ------------------------------------------------------------------
-   1. 颜色 / 间距 / 圆角 / 阴影等设计 token
+   设计语言：学术 / 扁平 / 编辑排版（Editorial）
+   - 纯白背景 + 细边框分区，不使用渐变、玻璃拟态与大圆角
+   - 标题使用衬线字体，正文使用无衬线字体，数据使用等宽字体
+   1. 颜色 / 间距 / 圆角等设计 token
    2. 盒模型、排版、链接、列表的轻量重置
    3. 按钮、表单控件、工具类
    ================================================================== */
 
 :root {
-  /* 主色与辅助色 */
-  --accent: #4f7cff;
-  --accent-dark: #3862e0;
-  --accent-soft: rgba(79, 124, 255, 0.12);
-  --success: #10b981;
-  --success-soft: rgba(16, 185, 129, 0.12);
-  --warn: #f59e0b;
-  --warn-soft: rgba(245, 158, 11, 0.14);
-  --danger: #ef4444;
-  --danger-soft: rgba(239, 68, 68, 0.12);
-  --purple: #8b5cf6;
-  --cyan: #06b6d4;
+  /* 主色与辅助色：深青 + 墨黑，拒绝紫蓝渐变 */
+  --accent: #007a87;
+  --accent-dark: #005e68;
+  --accent-soft: rgba(0, 122, 135, 0.08);
+  --accent-rule: #cfe1e3;
+  --success: #0f7b4f;
+  --success-soft: rgba(15, 123, 79, 0.08);
+  --warn: #8a5a00;
+  --warn-soft: rgba(138, 90, 0, 0.08);
+  --danger: #b3261e;
+  --danger-soft: rgba(179, 38, 30, 0.07);
+  --purple: #1f3a5f;
+  --cyan: #007a87;
 
   /* 中性色 */
-  --bg: #f5f7fb;
-  --bg-deep: #eef2f9;
+  --bg: #ffffff;
+  --bg-deep: #f3f4f6;
   --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --text: #0f172a;
-  --text-2: #334155;
-  --muted: #64748b;
-  --muted-2: #94a3b8;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --surface-2: #f8f9fa;
+  --text: #111827;
+  --text-2: #374151;
+  --muted: #6b7280;
+  --muted-2: #9ca3af;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
 
-  /* 圆角与阴影 */
-  --radius-sm: 8px;
-  --radius: 14px;
-  --radius-lg: 22px;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.14);
+  /* 圆角：只保留小圆角或直角；阴影统一关闭 */
+  --radius-sm: 2px;
+  --radius: 3px;
+  --radius-lg: 4px;
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-lg: none;
 
   /* 字体 */
-  --font: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
-    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+    Georgia, "Songti SC", "Noto Serif SC", "SimSun", serif;
+  --font-mono: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
 
   /* 布局 */
-  --header-height: 68px;
-  --container: 1180px;
+  --header-height: 64px;
+  --container: 1200px;
 
-  /* 过渡 */
-  --transition: 180ms ease;
+  /* 过渡：只保留颜色与边框的变化 */
+  --transition: 140ms ease;
 }
 
 /* ============================ 重置 ============================ */
@@ -70,13 +76,10 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--font);
-  font-size: 15.5px;
-  line-height: 1.72;
-  color: var(--text);
-  background:
-    radial-gradient(1200px 600px at 8% -10%, rgba(79, 124, 255, 0.10), transparent 60%),
-    radial-gradient(1000px 500px at 100% 0%, rgba(139, 92, 246, 0.08), transparent 55%),
-    var(--bg);
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--text-2);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -87,15 +90,16 @@ body.modal-open {
 
 h1, h2, h3, h4, h5 {
   margin: 0 0 0.5em;
+  font-family: var(--font-serif);
   font-weight: 700;
-  line-height: 1.32;
+  line-height: 1.28;
+  letter-spacing: -0.005em;
   color: var(--text);
-  letter-spacing: -0.01em;
 }
 
-h1 { font-size: clamp(1.7rem, 2.4vw, 2.2rem); }
-h2 { font-size: clamp(1.3rem, 1.7vw, 1.55rem); }
-h3 { font-size: 1.12rem; }
+h1 { font-size: clamp(1.85rem, 2.8vw, 2.5rem); }
+h2 { font-size: clamp(1.35rem, 1.8vw, 1.65rem); }
+h3 { font-size: 1.15rem; }
 h4 { font-size: 1rem; }
 
 p {
@@ -115,11 +119,13 @@ ul, ol {
 a {
   color: var(--accent);
   text-decoration: none;
+  text-underline-offset: 3px;
   transition: color var(--transition);
 }
 
 a:hover {
   color: var(--accent-dark);
+  text-decoration: underline;
 }
 
 img, svg, canvas {
@@ -142,51 +148,49 @@ input, select, textarea {
 }
 
 code {
-  padding: 0.15em 0.4em;
-  border-radius: 6px;
-  background: var(--bg-deep);
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
   font-family: var(--font-mono);
-  font-size: 0.9em;
-  color: var(--text-2);
+  font-size: 0.88em;
+  color: var(--text);
 }
 
 mark.hl {
   padding: 0 0.15em;
-  border-radius: 4px;
-  background: rgba(245, 158, 11, 0.32);
+  background: #fdf3c7;
   color: inherit;
 }
 
 ::selection {
-  background: rgba(79, 124, 255, 0.22);
+  background: rgba(0, 122, 135, 0.16);
 }
 
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 0;
 }
 
-/* 滚动条（WebKit） */
+/* 滚动条（WebKit）：方形细线，避免胶囊感 */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--surface-2);
 }
 
 ::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background: rgba(100, 116, 139, 0.35);
-  background-clip: content-box;
+  border: 3px solid var(--surface-2);
+  border-radius: 0;
+  background: var(--border-strong);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.55);
-  background-clip: content-box;
+  background: var(--muted-2);
 }
 
 /* ============================ 布局辅助 ============================ */
@@ -236,22 +240,38 @@ mark.hl {
 
 .eyebrow {
   display: inline-block;
-  margin-bottom: 0.35em;
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  margin-bottom: 0.6em;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
 .text-link {
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   color: var(--accent);
+  text-decoration: none;
 }
 
 .text-link:hover {
+  color: var(--accent-dark);
   text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 极简线性图标：统一描边、深灰色 */
+.icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
 }
 
 /* ============================ 按钮 ============================ */
@@ -261,58 +281,51 @@ mark.hl {
   align-items: center;
   justify-content: center;
   gap: 0.45em;
-  padding: 0.72em 1.35em;
+  padding: 0.68em 1.3em;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
-  font-size: 0.94rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
   white-space: nowrap;
-  transition: transform var(--transition), box-shadow var(--transition),
-    background var(--transition), border-color var(--transition), color var(--transition);
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-}
-
-.btn:active {
-  transform: translateY(0);
+  transition: background var(--transition), border-color var(--transition),
+    color var(--transition);
 }
 
 .btn--primary {
-  background: linear-gradient(135deg, var(--accent), #6b8dff);
+  border-color: var(--accent);
+  background: var(--accent);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(79, 124, 255, 0.28);
 }
 
 .btn--primary:hover {
-  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  border-color: var(--accent-dark);
+  background: var(--accent-dark);
   color: #fff;
-  box-shadow: 0 12px 26px rgba(79, 124, 255, 0.34);
 }
 
 .btn--ghost {
   border-color: var(--border-strong);
-  background: var(--surface);
-  color: var(--text-2);
+  background: transparent;
+  color: var(--text);
 }
 
 .btn--ghost:hover {
   border-color: var(--accent);
+  background: transparent;
   color: var(--accent);
-  background: var(--accent-soft);
 }
 
 .btn--danger {
-  background: linear-gradient(135deg, #f87171, var(--danger));
+  border-color: var(--danger);
+  background: var(--danger);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25);
 }
 
 .btn--danger:hover {
-  background: var(--danger);
+  border-color: #8f1d17;
+  background: #8f1d17;
   color: #fff;
 }
 
@@ -327,13 +340,13 @@ mark.hl {
 }
 
 .btn--sm {
-  padding: 0.5em 1em;
-  font-size: 0.85rem;
+  padding: 0.45em 0.9em;
+  font-size: 0.84rem;
 }
 
 .btn--lg {
-  padding: 0.9em 1.7em;
-  font-size: 1rem;
+  padding: 0.82em 1.6em;
+  font-size: 0.98rem;
 }
 
 .btn--block {
@@ -341,32 +354,31 @@ mark.hl {
 }
 
 .btn[disabled] {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
 }
 
-/* 圆形图标按钮 */
+/* 方形图标按钮 */
 .icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
   color: var(--text-2);
   font-size: 1rem;
-  font-weight: 700;
-  backdrop-filter: blur(6px);
-  transition: all var(--transition);
+  font-weight: 600;
+  transition: border-color var(--transition), color var(--transition),
+    background var(--transition);
 }
 
 .icon-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: #fff;
+  border-color: var(--text);
+  color: var(--text);
+  background: var(--surface);
 }
 
 .icon-btn.is-active {
@@ -383,12 +395,12 @@ input[type="number"],
 select,
 textarea {
   width: 100%;
-  padding: 0.75em 1em;
-  border: 1px solid var(--border);
+  padding: 0.72em 0.9em;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition: border-color var(--transition);
 }
 
 input::placeholder,
@@ -401,19 +413,18 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 select {
   appearance: none;
   padding-right: 2.4em;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2364748b' d='M1.4 0 6 4.6 10.6 0 12 1.4 6 7.4 0 1.4z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M1.4 0 6 4.6 10.6 0 12 1.4 6 7.4 0 1.4z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 1em center;
   cursor: pointer;
 }
 
-/* ============================ 通用块 ============================ */
+/* ============================ 进度与数据 ============================ */
 
 .ring {
   flex: none;
@@ -421,7 +432,7 @@ select {
 }
 
 .ring__bg {
-  stroke: rgba(148, 163, 184, 0.22);
+  stroke: #e5e7eb;
 }
 
 .ring__fg {
@@ -429,15 +440,35 @@ select {
 }
 
 .ring__text {
-  font-family: var(--font);
-  font-size: 0.82rem;
-  font-weight: 700;
-  fill: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  fill: var(--text);
 }
 
+/* 水平进度条：替代圆环，底色灰、进度深青 */
+.meter {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 500ms ease;
+}
+
+/* ============================ 通用块 ============================ */
+
 .section-title {
-  font-size: 1.15rem;
-  margin-bottom: 0.9rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.35rem;
 }
 
 .section-head {
@@ -445,25 +476,28 @@ select {
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 0.9rem;
+  margin-bottom: 1rem;
 }
 
 .section-head .section-title {
   margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 
 .tip-box {
   margin-top: 1.6rem;
   padding: 1rem 1.2rem;
-  border: 1px dashed rgba(79, 124, 255, 0.4);
-  border-radius: var(--radius);
-  background: rgba(79, 124, 255, 0.05);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
   color: var(--text-2);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
 .tip-box strong {
-  color: var(--accent-dark);
+  color: var(--text);
 }
 
 hr {
@@ -471,3 +505,4 @@ hr {
   border-top: 1px solid var(--border);
   margin: 1.5rem 0;
 }
+

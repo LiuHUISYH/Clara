@@ -15,42 +15,42 @@ wc -l index.html css/*.css js/*.js data/*.json
 | 文件 | 行数 |
 | --- | ---: |
 | `index.html` | 119 |
-| `css/base.css` | 473 |
-| `css/layout.css` | 540 |
-| `css/components.css` | 1,960 |
-| `css/pages.css` | 1,236 |
-| `js/utils.js` | 530 |
+| `css/base.css` | 508 |
+| `css/layout.css` | 571 |
+| `css/components.css` | 2,088 |
+| `css/pages.css` | 1,193 |
+| `js/utils.js` | 570 |
 | `js/storage.js` | 400 |
 | `js/data.js` | 325 |
 | `js/router.js` | 199 |
-| `js/knowledge.js` | 377 |
-| `js/quiz.js` | 694 |
+| `js/knowledge.js` | 386 |
+| `js/quiz.js` | 696 |
 | `js/wrongbook.js` | 305 |
 | `js/molecule3d.js` | 1,097 |
 | `js/tools.js` | 817 |
-| `js/app.js` | 419 |
-| `data/knowledge.json` | 1,103 |
+| `js/app.js` | 433 |
+| `data/knowledge.json` | 1,098 |
 | `data/quiz.json` | 640 |
 | `data/molecules.json` | 2,551 |
 | `data/nameMap.json` | 55 |
 | `data/equations.json` | 414 |
-| **合计** | **14,254** |
+| **合计** | **14,465** |
 
 ## 二、分类汇总
 
 | 类别 | 行数 | 占比 |
 | --- | ---: | ---: |
 | HTML | 119 | 0.8% |
-| CSS | 4,209 | 29.5% |
-| JavaScript | 5,163 | 36.2% |
-| JSON 数据 | 4,763 | 33.4% |
-| **核心交付代码合计** | **14,254** | **100%** |
+| CSS | 4,360 | 30.1% |
+| JavaScript | 5,228 | 36.1% |
+| JSON 数据 | 4,758 | 32.9% |
+| **核心交付代码合计** | **14,465** | **100%** |
 
 ```
-14,254 ÷ 8,000 ≈ 1.78 倍
+14,465 ÷ 8,000 ≈ 1.81 倍
 ```
 
-超出 PRD 最低要求约 78%。
+超出 PRD 最低要求约 81%。
 
 ## 三、附加文件（不计入核心交付代码）
 
@@ -63,7 +63,7 @@ wc -l index.html css/*.css js/*.js data/*.json
 | `data/*.js`（5 个） | 30 | 自动生成的包装文件（每个 6 行） |
 | **附加合计** | **1,301** | |
 
-全部文件（含附加）总计：**15,555 行**。
+全部文件（含附加）总计：**15,766 行**。
 
 ## 四、统计口径说明
 

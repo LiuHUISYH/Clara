@@ -56,7 +56,7 @@
     var bodyHtml;
     if (!items.length) {
       bodyHtml = '<div class="empty-state">' +
-        '<div class="empty-state__icon">🎉</div>' +
+        '<div class="empty-state__icon">' + U.icon('target') + '</div>' +
         '<h2>' + (stats.total ? '当前筛选条件下没有错题' : '错题集是空的') + '</h2>' +
         '<p>' + (stats.total
           ? '试试切换筛选条件，或回到练习继续挑战。'
@@ -80,7 +80,7 @@
         if (!list || !list.length) return '';
         return '<section class="wrong-group" style="--chapter-color:' + chapter.color + '">' +
           '<header class="wrong-group__head">' +
-          '<h2><span class="wrong-group__icon">' + chapter.icon + '</span>' +
+          '<h2><span class="wrong-group__icon">' + (chapter.index < 10 ? '0' : '') + chapter.index + '</span>' +
           U.escapeHtml(chapter.title) + '</h2>' +
           '<span class="chip">' + list.length + ' 道</span>' +
           '</header>' +
