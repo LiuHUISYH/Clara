@@ -16,7 +16,7 @@ wc -l index.html css/*.css js/*.js data/*.json
 | --- | ---: |
 | `index.html` | 119 |
 | `css/base.css` | 508 |
-| `css/layout.css` | 571 |
+| `css/layout.css` | 570 |
 | `css/components.css` | 2,088 |
 | `css/pages.css` | 1,193 |
 | `js/utils.js` | 570 |
@@ -34,20 +34,20 @@ wc -l index.html css/*.css js/*.js data/*.json
 | `data/molecules.json` | 2,551 |
 | `data/nameMap.json` | 55 |
 | `data/equations.json` | 414 |
-| **合计** | **14,465** |
+| **合计** | **14,464** |
 
 ## 二、分类汇总
 
 | 类别 | 行数 | 占比 |
 | --- | ---: | ---: |
 | HTML | 119 | 0.8% |
-| CSS | 4,360 | 30.1% |
+| CSS | 4,359 | 30.1% |
 | JavaScript | 5,228 | 36.1% |
 | JSON 数据 | 4,758 | 32.9% |
-| **核心交付代码合计** | **14,465** | **100%** |
+| **核心交付代码合计** | **14,464** | **100%** |
 
 ```
-14,465 ÷ 8,000 ≈ 1.81 倍
+14,464 ÷ 8,000 ≈ 1.81 倍
 ```
 
 超出 PRD 最低要求约 81%。
@@ -63,7 +63,7 @@ wc -l index.html css/*.css js/*.js data/*.json
 | `data/*.js`（5 个） | 30 | 自动生成的包装文件（每个 6 行） |
 | **附加合计** | **1,301** | |
 
-全部文件（含附加）总计：**15,766 行**。
+全部文件（含附加）总计：**15,765 行**。
 
 ## 四、统计口径说明
 

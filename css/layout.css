@@ -35,22 +35,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-sm);
-  background: var(--text);
-  color: #fff;
+  border-radius: 0;
+  background: none;
+  color: var(--accent);
   font-family: var(--font-serif);
   font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: 0.02em;
+  font-size: 1.7rem;
+  line-height: 1;
+  letter-spacing: 0.01em;
 }
 
 .brand__mark--sm {
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-sm);
-  font-size: 0.95rem;
+  border-radius: 0;
+  font-size: 1.3rem;
 }
 
 .brand__text {
@@ -60,7 +57,9 @@
 }
 
 .brand__text strong {
-  font-size: 1.02rem;
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 700;
   letter-spacing: -0.01em;
 }
 

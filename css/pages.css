@@ -75,8 +75,8 @@
 
 .hero__stats strong {
   font-family: var(--font-mono);
-  font-size: 1.9rem;
-  font-weight: 600;
+  font-size: 2.2rem;
+  font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.03em;
   color: var(--text);
