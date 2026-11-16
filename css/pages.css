@@ -1315,6 +1315,47 @@
   outline-offset: 1px;
 }
 
+/*
+ * 悬停对准：容器被拖到目标瓶口正上方、X 轴对齐时，目标容器套一圈虚线口沿 +
+ * 瓶口脉动光圈，提示「松手就倒进去」。判定来源与松手结算同为 pourAlign。
+ */
+.lab-vessel--pour-ready {
+  outline: 1px dashed rgba(79, 139, 200, 0.55);
+  outline-offset: 1px;
+}
+
+.lab-vessel--pour-ready::after {
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  width: 44px;
+  height: 12px;
+  margin-left: -22px;
+  border: 1px dashed var(--accent);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+  animation: lab-pour-ready 1.1s ease-in-out infinite;
+}
+
+@keyframes lab-pour-ready {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: translateY(0) scaleX(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px) scaleX(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-vessel--pour-ready::after {
+    animation: none;
+  }
+}
+
 .lab-vessel--dragging {
   opacity: 0.24;
 }
@@ -1606,11 +1647,35 @@
   }
 }
 
-/* 反应放气：液面下升起的气泡 */
+/* 沉淀颗粒：比沉积层更轻的絮状小点，缓慢浮动，沉淀不只是一块色块 */
+.lab-solid-mote {
+  opacity: 0.42;
+  animation: lab-mote-drift 3.6s ease-in-out infinite alternate;
+}
+
+@keyframes lab-mote-drift {
+  from {
+    opacity: 0.2;
+    transform: translateY(1.4px);
+  }
+  to {
+    opacity: 0.52;
+    transform: translateY(-1.6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-solid-mote {
+    animation: none;
+    opacity: 0.42;
+  }
+}
+
+/* 反应放气：液面下升起的气泡（浅青灰 + 深一圈描边，白底上也看得清） */
 .lab-bubble {
-  fill: rgba(255, 255, 255, 0.92);
-  stroke: rgba(92, 132, 152, 0.45);
-  stroke-width: 0.5;
+  fill: rgba(232, 244, 249, 0.95);
+  stroke: rgba(74, 120, 145, 0.55);
+  stroke-width: 0.6;
   opacity: 0;
   animation: lab-bubble-rise 2.1s ease-in infinite;
 }
@@ -1665,6 +1730,55 @@
 @media (prefers-reduced-motion: reduce) {
   .lab-vessel--boiling .lab-liquid__wave {
     animation: none;
+  }
+}
+
+/* ---------- 浑浊：沉淀把液体变浑 ---------- */
+
+/*
+ * 一层白色雾：不透明度由 store 的 turbidity（固含量）给出。
+ * 带一点冷灰，白底玻璃上也能看出「浑」，而不是和背景一起糊掉。
+ */
+.lab-liquid__haze {
+  fill: #e9eeec;
+  pointer-events: none;
+  transition: opacity 640ms ease;
+}
+
+/* ---------- 水蒸气：沸腾时从瓶口飘出的白色雾团 ---------- */
+
+.lab-steam {
+  /* 白底上纯白看不见：用略深的冷灰白 + 模糊，像真正的热汽 */
+  fill: rgba(200, 217, 225, 0.78);
+  filter: blur(2.6px);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lab-steam-rise 3.4s ease-out infinite;
+}
+
+@keyframes lab-steam-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.55);
+  }
+  16% {
+    opacity: 0.7;
+  }
+  58% {
+    opacity: 0.42;
+    transform: translate(calc(var(--lab-drift, 0px) * 0.6), -18px) scale(1.35);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--lab-drift, 0px), -34px) scale(1.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-steam {
+    animation: none;
+    opacity: 0.35;
   }
 }
 
@@ -2106,9 +2220,14 @@
   z-index: 2;
 }
 
-/* 夹在铁架台上的容器：压在铁架台之上，铁圈才不会盖住玻璃 */
+/* 夹在铁架台上的容器：压在铁架台之上，铁圈才不会盖住玻璃；拖动被禁用 */
 .lab-vessel--clamped {
   z-index: 3;
+  cursor: not-allowed;
+}
+
+.lab-vessel--clamped .lab-vessel__sub {
+  color: var(--muted);
 }
 
 .lab-vessel--tool {
@@ -2372,26 +2491,28 @@ button.lab-actions__state:hover {
   color: var(--accent);
 }
 
-/* ---------- 底部实验日志 ---------- */
+/* ---------- 底部实验日志：仿终端（深色底 + 等宽字） ---------- */
 
 .lab-console {
   display: flex;
   flex-direction: column;
   grid-area: console;
   min-height: 0;
-  border-top: 1px solid var(--border-strong);
-  background: #f7f7f5;
+  border-top: 1px solid #14171a;
+  background: #14171a;
 }
 
 .lab-console__bar {
   height: 30px;
-  background: #f7f7f5;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #14171a;
+  color: rgba(226, 232, 236, 0.58);
 }
 
 .lab-console__clear {
   padding: 0.15em 0;
   border-radius: 0;
-  color: var(--muted);
+  color: rgba(226, 232, 236, 0.5);
   cursor: pointer;
   font-family: inherit;
   font-size: inherit;
@@ -2400,12 +2521,12 @@ button.lab-actions__state:hover {
 }
 
 .lab-console__clear:hover:not(:disabled) {
-  color: var(--text);
+  color: #f2f5f7;
 }
 
 .lab-console__clear:disabled {
   cursor: default;
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
 .lab-log {
@@ -2414,11 +2535,11 @@ button.lab-actions__state:hover {
   margin: 0;
   padding: 0.4rem 1rem 0.65rem;
   overflow-y: auto;
-  color: var(--text-2);
+  color: rgba(230, 236, 240, 0.86);
   font-family: var(--font-mono);
   font-size: 0.69rem;
   line-height: 1.75;
-  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
   scrollbar-width: thin;
 }
 
@@ -2431,21 +2552,21 @@ button.lab-actions__state:hover {
 }
 
 .lab-log__time {
-  color: var(--muted-2);
+  color: rgba(230, 236, 240, 0.3);
   font-size: 0.64rem;
 }
 
 .lab-log__level {
-  color: var(--muted);
+  color: rgba(230, 236, 240, 0.46);
   white-space: nowrap;
 }
 
 .lab-log__level--reaction {
-  color: var(--accent);
+  color: #7fd6a4;
 }
 
 .lab-log__level--warn {
-  color: var(--danger);
+  color: #e6b05f;
 }
 
 .lab-log__text {
@@ -2454,13 +2575,13 @@ button.lab-actions__state:hover {
 }
 
 .lab-log__text::before {
-  color: var(--muted-2);
+  color: rgba(127, 214, 164, 0.7);
   content: '> ';
 }
 
 .lab-log__empty {
   padding: 0.2rem 0;
-  color: var(--muted-2);
+  color: rgba(230, 236, 240, 0.34);
   font-size: 0.66rem;
 }
 

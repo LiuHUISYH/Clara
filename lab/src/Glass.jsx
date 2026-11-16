@@ -8,6 +8,8 @@
  *   底/口   base 底部椭圆内壁、mouthArc 瓶口内弧，让直口容器也有立体感
  * 液体用一条正弦波顶边的 path 填充，靠 CSS 横向漂移做出液面起伏；
  * 颜色变化通过 CSS transition 平滑过渡（0.48s），供变色反应使用。
+ * 沉淀生成后液体再叠一层冷灰白浑浊（turbidity → lab-liquid__haze），
+ * 底部沉积堆体旁撒几颗浮动颗粒；沸腾时瓶口升起模糊水蒸气（lab-steam）。
  * 几何字段（body / x / width / top / bottom）同时被液体与沉淀复用，
  * 调整时不要只改轮廓：液体高度按 top..bottom 映射。
  */
@@ -143,8 +145,9 @@ function liquidHeight(item, shape) {
   if (!item.capacity || !item.volume) return 0;
   var ratio = Math.max(0, Math.min(1, item.volume / item.capacity));
   if (ratio === 0) return 0;
-  /* 体积→高度用 0.75 次幂：10 mL 在 250 mL 烧杯里也看得见，高低仍随体积单调变化。 */
-  return Math.max(5, (shape.bottom - shape.top) * Math.pow(ratio, 0.75));
+  /* 体积→高度用 0.75 次幂：10 mL 在 250 mL 烧杯里也看得见，高低仍随体积单调变化。
+     最薄一层留 8px，少体积液体才不会缩成一条看不出颜色的细线。 */
+  return Math.max(8, (shape.bottom - shape.top) * Math.pow(ratio, 0.75));
 }
 
 /* 一条由 segments 个波峰组成的横波，用于液面顶边。 */
@@ -206,7 +209,7 @@ function GlassDefs(props) {
   );
 }
 
-/* 液体：波浪顶边 + 玻璃内腔裁切 + 缓慢横向漂移。 */
+/* 液体：波浪顶边 + 玻璃内腔裁切 + 缓慢横向漂移；沉淀越多，叠一层白色浑浊。 */
 function LiquidLayer(props) {
   var shape = props.shape;
   var height = props.height;
@@ -218,11 +221,16 @@ function LiquidLayer(props) {
   var right = shape.x + shape.width + 30;
   var wave = wavePath(left, right, surface, crest, 12);
   var body = wave + ' V' + round(shape.bottom + 8) + ' H' + round(left) + ' Z';
+  var haze = Math.max(0, Math.min(0.86, props.turbidity || 0));
 
   return (
     <g clipPath={'url(#' + props.clipId + ')'} className="lab-liquid" aria-hidden="true">
       <g className="lab-liquid__wave">
         <path className="lab-liquid__fill" d={body} fill={props.color || '#e2ecef'} />
+        {/* 悬浮固体把液体变浑：白色雾层的不透明度跟着固含量平滑过渡 */}
+        {haze > 0 ? (
+          <path className="lab-liquid__haze" d={body} style={{ opacity: haze }} />
+        ) : null}
         <path className="lab-liquid__shade" d={body} fill={'url(#' + props.prefix + '-liquid-shade)'} />
         <path className="lab-liquid__meniscus" d={wave} />
         <path className="lab-liquid__meniscus-shade" d={wave} transform="translate(0 1.2)" />
@@ -231,7 +239,11 @@ function LiquidLayer(props) {
   );
 }
 
-/* 沉淀：按质量画成容器底部的弧形堆积，颜色取自物质表。 */
+/*
+ * 沉淀：按质量画成容器底部的弧形堆积，颜色取自物质表。
+ * 堆体之外再撒几颗更小的颗粒（lab-solid-mote）：絮状沉淀一团一团的质感，
+ * 而不是一块干净的色块；堆体高度也压得比液体浅，避免超过真实液面。
+ */
 function SolidMarks(props) {
   var solids = props.contents.filter(function (entry) {
     return entry.state === 'solid';
@@ -245,34 +257,52 @@ function SolidMarks(props) {
     <g clipPath={'url(#' + props.clipId + ')'} className="lab-solid-group" aria-hidden="true">
       {solids.map(function (entry, index) {
         var mass = entry.mass || 1;
-        var width = Math.max(12, Math.min(shape.width - 4, 12 + mass * 7));
-        /* 堆积高度随质量增长，但不超过底宽的 42%，避免细试管里出现尖锥 */
-        var rise = Math.max(3, Math.min(width * 0.42, 3 + mass * 1.8));
+        var color = entry.color || SOLID_COLORS[entry.chemical] || '#8e8b81';
+        var width = Math.max(10, Math.min(shape.width - 6, 10 + mass * 4.5));
+        /* 堆积高度随质量增长，但不超过底宽的 26%，不会在细试管里堆成尖锥 */
+        var rise = Math.max(2.4, Math.min(width * 0.26, 2.4 + mass * 1.1));
         var offset = solids.length > 1 ? (index - (solids.length - 1) / 2) * 6 : 0;
         var left = centre - width / 2 + offset;
         var right = left + width;
+        var motes = [];
+
+        for (var m = 0; m < 5; m += 1) {
+          motes.push(
+            <circle
+              className="lab-solid-mote"
+              key={'mote-' + m}
+              cx={round(left + width * ((m + 0.5) / 5))}
+              cy={round(shape.bottom - rise * (0.5 + (m % 3) * 0.45))}
+              r={round(0.8 + (m % 3) * 0.35)}
+              fill={color}
+              style={{ animationDelay: (m * 0.55 + index * 0.3).toFixed(1) + 's' }}
+            />
+          );
+        }
 
         return (
-          <path
-            className="lab-solid"
-            key={entry.chemical + '-' + index}
-            d={
-              'M' +
-              left +
-              ' ' +
-              shape.bottom +
-              ' Q' +
-              (left + width / 2) +
-              ' ' +
-              (shape.bottom - rise * 2) +
-              ' ' +
-              right +
-              ' ' +
-              shape.bottom +
-              ' Z'
-            }
-            fill={entry.color || SOLID_COLORS[entry.chemical] || '#8e8b81'}
-          />
+          <g key={entry.chemical + '-' + index}>
+            <path
+              className="lab-solid"
+              d={
+                'M' +
+                left +
+                ' ' +
+                shape.bottom +
+                ' Q' +
+                (left + width / 2) +
+                ' ' +
+                (shape.bottom - rise * 2) +
+                ' ' +
+                right +
+                ' ' +
+                shape.bottom +
+                ' Z'
+              }
+              fill={color}
+            />
+            {motes}
+          </g>
         );
       })}
     </g>
@@ -281,30 +311,31 @@ function SolidMarks(props) {
 
 /*
  * 放气 / 沸腾现象：液面下升起一组气泡，CSS 负责漂浮动画。
- * 沸腾时气泡更多、更密、动画更快（lab-bubbles--boil），一眼能分出「在冒气」
- * 和「水开了」。
+ * 气泡数量由 store 的 gasTimes（同一次操作里规则触发次数）决定 —— 反应越剧烈
+ * 气泡越密；沸腾时在此基础上再加密、加速（lab-bubbles--boil），一眼能分出
+ * 「在冒气」和「水开了」。
  */
 function Bubbles(props) {
   var shape = props.shape;
   var height = props.height;
   var boiling = !!props.boiling;
-  var count = boiling ? 8 : 5;
+  var count = Math.max(3, Math.min(10, props.count || 5));
   var rise = Math.max(6, Math.min(28, height - 6));
   var bubbles = [];
 
   for (var index = 0; index < count; index += 1) {
-    var cx = shape.x + shape.width * (0.14 + (index % 4) * 0.24);
-    var radius = boiling ? 1.6 + (index % 3) * 0.5 : 1.5 + (index % 3) * 0.5;
+    var cx = shape.x + shape.width * (0.14 + (index % 4) * 0.24) + (index % 2 ? 1.6 : -1.2);
+    var radius = boiling ? 1.6 + (index % 3) * 0.5 : 1.4 + (index % 3) * 0.45;
 
     bubbles.push(
       <circle
         className="lab-bubble"
         key={index}
-        cx={cx}
+        cx={round(cx)}
         cy={shape.bottom - 3}
-        r={radius}
+        r={round(radius)}
         style={{
-          animationDelay: (boiling ? index * 0.15 : index * 0.4).toFixed(2) + 's',
+          animationDelay: (boiling ? index * 0.12 : index * 0.32).toFixed(2) + 's',
           '--lab-rise': '-' + rise + 'px'
         }}
       />
@@ -318,6 +349,40 @@ function Bubbles(props) {
       aria-hidden="true"
     >
       {bubbles}
+    </g>
+  );
+}
+
+/*
+ * 水蒸气：沸腾时从瓶口飘出的白色雾团（不受玻璃裁切，可以越过器物轮廓）。
+ * 每组雾团的大小 / 横向漂移 / 延迟都写在内联 CSS 变量里，动画在 pages.css，
+ * 统一用 blur 做出「模糊白雾」，避免和气泡混淆。
+ */
+function Steam(props) {
+  var shape = props.shape;
+  var mouthY = shape.mouth ? shape.mouth.cy : shape.top;
+  var mouthX = shape.mouth ? shape.mouth.cx : shape.x + shape.width / 2;
+  var puffs = [];
+
+  for (var index = 0; index < 5; index += 1) {
+    puffs.push(
+      <circle
+        className="lab-steam"
+        key={index}
+        cx={round(mouthX + (index - 2) * 4.2)}
+        cy={round(mouthY - 2)}
+        r={round(4 + (index % 3) * 1.3)}
+        style={{
+          animationDelay: (index * 0.42).toFixed(2) + 's',
+          '--lab-drift': (index % 2 ? 1 : -1) * (2 + index) + 'px'
+        }}
+      />
+    );
+  }
+
+  return (
+    <g className="lab-steam-group" aria-hidden="true">
+      {puffs}
     </g>
   );
 }
@@ -428,13 +493,20 @@ export function ContainerGraphic(props) {
         shape={shape}
         height={height}
         color={item.color}
+        turbidity={item.turbidity}
         clipId={clipId}
         prefix={prefix}
       />
 
       {/* 放气或沸腾时从液面升起气泡；沸腾的气泡更多更密（lab-bubbles--boil）。 */}
       {item.gas || item.boiling ? (
-        <Bubbles shape={shape} height={height} clipId={clipId} boiling={!!item.boiling} />
+        <Bubbles
+          shape={shape}
+          height={height}
+          clipId={clipId}
+          boiling={!!item.boiling}
+          count={item.boiling ? 9 : Math.min(10, 4 + (item.gasTimes || 0) * 2)}
+        />
       ) : null}
       <SolidMarks contents={item.contents} shape={shape} clipId={clipId} />
 
@@ -443,6 +515,8 @@ export function ContainerGraphic(props) {
 
       <GlassMarks shape={shape} />
       <path className="lab-glass" d={shape.body} />
+      {/* 水蒸气画在玻璃之上：沸腾的雾气会越过器物轮廓继续上升 */}
+      {item.boiling && height > 0 ? <Steam shape={shape} /> : null}
       {shape.stopper ? (
         <Stopper
           shape={shape}

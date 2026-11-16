@@ -4,56 +4,59 @@ import {
   DragOverlay,
   PointerSensor,
   pointerWithin,
+  useDndMonitor,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors
 } from '@dnd-kit/core';
 import { LAB_LIBRARY, LAB_ITEM_COUNT, LAB_REAGENTS } from './library';
-import { useLabStore, LAB_GEOMETRY, clampPoint } from './store';
+import { useLabStore, LAB_GEOMETRY, clampPoint, pourAlign, mouthPoint } from './store';
 import { LabGraphic } from './Vessel';
 
-var TOKEN_WIDTH = 104;
-var TOKEN_HEIGHT = 128;
+/* 令牌外框直接取 store 的实体尺寸，页面与碰撞判定不会各说各话。 */
+var TOKEN_WIDTH = LAB_GEOMETRY.itemWidth;
+var TOKEN_HEIGHT = LAB_GEOMETRY.itemHeight;
 var TARGET_PREFIX = 'target:';
 
 /*
- * 倾倒手势的空间阈值：只有被拖容器的中心落在目标容器中心附近（约令牌的
- * 半宽、半高）时才认定为“倒进去”。两个令牌外框只是擦边重叠时算自由摆放，
- * 否则想把两个容器摆得近一点都会被误判成倒液。
+ * 倾倒手势的几何判定全部来自 store 的实体坐标（ECS）：
+ * 用拖拽中的令牌外框 + 画布矩形换算出「源容器现在在哪」，再和落点容器做
+ * pourAlign（瓶口 X 中心对齐 + 上下叠住）。不读 DOM 尺寸，页面缩放也不会跑偏。
  */
-var POUR_RANGE_X = 56;
-var POUR_RANGE_Y = 64;
 
-function rectCentre(rect) {
-  if (!rect) return null;
-  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+/* 拖拽中的令牌左上角 → 画布坐标（画布本身也是一个 droppable，能拿到它的矩形）。 */
+function dragOrigin(args) {
+  var translated = args.active.rect.current && args.active.rect.current.translated;
+  var bench = args.droppableRects.get('bench');
+  if (!translated || !bench) return null;
+
+  return { x: translated.left - bench.left, y: translated.top - bench.top };
 }
 
-/* 指针离目标容器中心足够近，才算“把东西倒进这个容器”。 */
-function withinPourRange(point, targetRect) {
-  var centre = rectCentre(targetRect);
-  if (!point || !centre) return false;
+/* 把拖拽中的容器换算成一个临时的实体（坐标用当前拖拽位置，其余字段照抄）。 */
+function dragEntity(args) {
+  var data = args.active.data.current;
+  var origin = dragOrigin(args);
+  if (!data || !data.item || !origin) return null;
 
-  return Math.abs(point.x - centre.x) <= POUR_RANGE_X && Math.abs(point.y - centre.y) <= POUR_RANGE_Y;
+  return Object.assign({}, data.item, origin);
 }
 
 /*
  * 指针落在容器上时优先命中容器，否则落回整张实验台。
- * 实验台上的容器互拖时还要校验距离：擦边重叠只是摆放，压到中心才倒液。
+ * 实验台上的容器互拖时用 pourAlign 判定：瓶口 X 中心差 ≤ 26px 且两容器上下叠住
+ * 才算「倒进去」，只是擦边重叠就当自由摆放 —— 想把两个容器摆近一点不会被误判。
  * 从器材库拖出来的试剂 / 器材不受影响，落点只要在容器内就生效。
- * 酒精灯也是落点，但只认火柴：把火柴凑到灯芯上才点亮，其它器材压上去
- * 仍然只是摆放，免得「把烧杯架到火焰上」被误判成倒液。
+ * 酒精灯也是落点，但只认火柴；铁架台与石棉网各有自己的吸附落点。
  */
 function labCollisionDetection(args) {
   var hits = pointerWithin(args);
   if (hits.length === 0) return [];
 
   var data = args.active.data.current;
-  var fromBench = !!data && data.kind === 'bench-item';
   var isMatch = !!data && !!data.item && data.item.type === 'match';
-  var activeRect = args.active.rect.current ? args.active.rect.current.translated : null;
-  var point = args.pointerCoordinates || rectCentre(activeRect);
+  var dragged = data && data.kind === 'bench-item' ? dragEntity(args) : null;
   var rest = [];
 
   for (var i = 0; i < hits.length; i += 1) {
@@ -67,7 +70,7 @@ function labCollisionDetection(args) {
 
     /*
      * 石棉网与容器互为落点：容器拖到网上就吸上去，石棉网拖到容器上就垫到下面。
-     * 这两种情况都不走“倒液”判定，所以先于容器的距离校验返回。
+     * 这两种情况都不走“倒液”判定，所以先于容器的对准校验返回。
      */
     if (data && data.item) {
       if (data.item.type === 'wire-gauze' && targetItem.kind === 'container') return [hits[i]];
@@ -82,9 +85,13 @@ function labCollisionDetection(args) {
     if (isMatch && targetItem.type === 'burner') return [hits[i]];
     if (targetItem.kind !== 'container') continue;
 
-    if (!fromBench || withinPourRange(point, args.droppableRects.get(hits[i].id))) {
-      return [hits[i]];
+    /* 容器 → 容器：瓶口对准才认作倒液；没对准就继续找其它落点（按自由摆放处理）。 */
+    if (dragged && targetItem.id !== dragged.id) {
+      if (pourAlign(dragged, targetItem).canPour) return [hits[i]];
+      continue;
     }
+
+    return [hits[i]];
   }
 
   return rest;
@@ -115,6 +122,7 @@ function itemSubText(item) {
   }
 
   return (
+    (item.clamp ? '铁夹上 · ' : '') +
     (item.temperature !== 25 ? item.temperature + '°C · ' : '') +
     (item.boiling ? '沸腾 · ' : '') +
     body
@@ -299,7 +307,9 @@ function BenchItem(props) {
   });
   var drag = useDraggable({
     id: 'bench:' + item.id,
-    data: { kind: 'bench-item', id: item.id, item: item }
+    data: { kind: 'bench-item', id: item.id, item: item },
+    /* 夹在铁架台上的容器是锁定实体：先「取下」才能再拖。 */
+    disabled: !!item.clamp
   });
   var drop = useDroppable({
     id: TARGET_PREFIX + item.id,
@@ -345,6 +355,7 @@ function BenchItem(props) {
   if (item.heating) className += ' lab-vessel--heating';
   if (item.boiling) className += ' lab-vessel--boiling';
   if (item.clamp) className += ' lab-vessel--clamped';
+  if (props.pourReady) className += ' lab-vessel--pour-ready';
   if (pouring && props.pourTarget) {
     className +=
       ' lab-vessel--pouring' + (props.pourTarget.x < item.x ? ' lab-vessel--pour-left' : '');
@@ -358,7 +369,10 @@ function BenchItem(props) {
       data-item-id={item.id}
       {...drag.attributes}
       {...drag.listeners}
-      aria-label={'选择' + item.name}
+      aria-label={
+        item.clamp ? item.name + '（已夹在铁架台上）' : '选择' + item.name
+      }
+      title={item.clamp ? '已夹在铁架台上：先在操作条上「取下」' : undefined}
       onClick={function (event) {
         event.stopPropagation();
         props.onSelect(item.id);
@@ -384,10 +398,10 @@ function BenchItem(props) {
 }
 
 /*
- * 倒液水柱：在两个容器的口沿之间画一条流动的虚线，颜色取源液体。
+ * 倒液水柱：在两个容器的瓶口之间画一条流动的虚线，颜色与线宽都取源液体。
  * 纯视觉层 —— 进度、体积都由 store 的 pourFlow 驱动，动画结束后才结算。
- * 源容器倾斜 38°，瓶口大致落在令牌右侧（向左倒时落在左侧），水柱从那里
- * 落到目标容器的口沿里。
+ * 起点 / 落点来自 store 的 mouthPoint（瓶口中心），源容器倾斜 38° 后瓶口甩向
+ * 目标一侧，所以起点再往倾倒方向偏移半指宽，水柱从唇边落到目标瓶口里。
  */
 function PourStream(props) {
   var flow = props.flow;
@@ -401,21 +415,24 @@ function PourStream(props) {
   });
   if (!source || !target) return null;
 
-  var toLeft = target.x < source.x;
-  var mouthX = source.x + (toLeft ? -4 : 108);
-  var mouthY = source.y + 22;
-  var dropX = target.x + TOKEN_WIDTH / 2;
-  var dropY = target.y + 34;
-  var bendX = mouthX + (toLeft ? -10 : 10);
+  var from = mouthPoint(source);
+  var to = mouthPoint(target);
+  var toLeft = to.x < from.x;
+  var mouthX = from.x + (toLeft ? -12 : 12);
+  var mouthY = from.y + 3;
+  var dropX = to.x;
+  var dropY = to.y + 6;
+  var bendX = mouthX + (toLeft ? -12 : 12);
   var bendY = (mouthY + dropY) / 2;
+  var thickness = 2.2 + Math.min(1.6, flow.amount / 12);
   var d =
     'M' + Math.round(mouthX) + ' ' + Math.round(mouthY) +
     ' Q' + Math.round(bendX) + ' ' + Math.round(bendY) + ' ' + Math.round(dropX) + ' ' + Math.round(dropY);
 
   return (
     <svg className="lab-pour" aria-hidden="true" focusable="false">
-      <path className="lab-pour__stream" d={d} style={{ stroke: flow.color }} />
-      <path className="lab-pour__glint" d={d} />
+      <path className="lab-pour__stream" d={d} style={{ stroke: flow.color, strokeWidth: thickness }} />
+      <path className="lab-pour__glint" d={d} style={{ strokeWidth: Math.max(0.5, thickness - 1.8) }} />
       <circle
         className="lab-pour__drop"
         cx={Math.round(dropX)}
@@ -441,6 +458,56 @@ function Workbench(props) {
     return state.clearSelection;
   });
   const canvas = useDroppable({ id: 'bench' });
+  const [pourReadyId, setPourReadyId] = useState(null);
+
+  /*
+   * 悬停对准提示（物理层）：拖拽过程中把令牌当前位置换算成实体坐标，
+   * 用 pourAlign 找「瓶口在目标瓶口上方且 X 对齐」的容器，给它套一圈虚线瓶口罩。
+   * 判定和松手结算共用 canPour，看到提示就一定倒得进去。
+   */
+  useDndMonitor({
+    onDragMove: function (event) {
+      var data = event.active.data.current;
+      var canvasNode = props.canvasRef.current;
+      var translated = event.active.rect.current ? event.active.rect.current.translated : null;
+
+      if (
+        !data ||
+        data.kind !== 'bench-item' ||
+        !data.item ||
+        data.item.kind !== 'container' ||
+        !canvasNode ||
+        !translated
+      ) {
+        setPourReadyId(function (current) {
+          return current === null ? current : null;
+        });
+        return;
+      }
+
+      var rect = canvasNode.getBoundingClientRect();
+      var moving = Object.assign({}, data.item, {
+        x: translated.left - rect.left,
+        y: translated.top - rect.top
+      });
+      var ready = null;
+
+      useLabStore.getState().items.forEach(function (entry) {
+        if (ready || entry.kind !== 'container' || entry.id === moving.id) return;
+        if (pourAlign(moving, entry).canPour) ready = entry.id;
+      });
+
+      setPourReadyId(function (current) {
+        return current === ready ? current : ready;
+      });
+    },
+    onDragEnd: function () {
+      setPourReadyId(null);
+    },
+    onDragCancel: function () {
+      setPourReadyId(null);
+    }
+  });
 
   var selected = null;
   var pourTarget = null;
@@ -481,6 +548,7 @@ function Workbench(props) {
               onSelect={props.onSelect}
               pour={pourFlow}
               pourTarget={pourTarget}
+              pourReady={item.id === pourReadyId}
             />
           );
         })}
@@ -529,6 +597,9 @@ function BenchActions(props) {
   var toggleStopper = useLabStore(function (state) {
     return state.toggleStopper;
   });
+  var releaseClamp = useLabStore(function (state) {
+    return state.releaseClamp;
+  });
   var items = useLabStore(function (state) {
     return state.items;
   });
@@ -575,7 +646,7 @@ function BenchActions(props) {
         ) : null}
         {isContainer ? (
           <span className="lab-actions__line">
-            Temp: {item.temperature}°C | PH: {phText} | Volume: {item.volume}mL
+            Vol: {item.volume}mL | Temp: {item.temperature}°C | PH: {phText}
           </span>
         ) : (
           <span className="lab-actions__line">{toolStatus(item, matchBurning)}</span>
@@ -584,22 +655,28 @@ function BenchActions(props) {
           <span
             className={
               'lab-actions__heat' +
-              (item.evenHeat
+              (item.clamp
                 ? ' lab-actions__heat--even'
-                : item.heating
-                  ? ' lab-actions__heat--uneven'
-                  : '')
+                : item.evenHeat
+                  ? ' lab-actions__heat--even'
+                  : item.heating
+                    ? ' lab-actions__heat--uneven'
+                    : '')
             }
           >
-            {item.evenHeat
-              ? '受热: 垫石棉网 · 均匀受热'
-              : item.heating
-                ? '受热: 直接受热 · 玻璃受热不均'
-                : '受热: 未受热'}
+            {item.clamp
+              ? '夹持: 铁夹锁定 · 先「取下」才能移动'
+              : item.evenHeat
+                ? '受热: 垫石棉网 · 均匀受热'
+                : item.heating
+                  ? '受热: 直接受热 · 玻璃受热不均'
+                  : '受热: 未受热'}
           </span>
         ) : null}
         {isContainer ? (
-          <span className="lab-actions__contents">Contents: {contentText(item.contents)}</span>
+          <span className="lab-actions__contents">
+            Contents: {item.contents.length ? '[' + contentText(item.contents) + ']' : '空'}
+          </span>
         ) : null}
         {isContainer && item.phenomenon ? (
           <span className="lab-actions__phenomenon">现象: {item.phenomenon}</span>
@@ -637,6 +714,18 @@ function BenchActions(props) {
           >
             清空
           </button>
+          {item.clamp ? (
+            <button
+              className="lab-action lab-action--active"
+              type="button"
+              onClick={function () {
+                setPickerOpen(false);
+                releaseClamp(item.id);
+              }}
+            >
+              取下
+            </button>
+          ) : null}
           <button
             className="lab-action lab-action--ghost"
             type="button"

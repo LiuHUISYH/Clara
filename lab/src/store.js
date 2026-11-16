@@ -1,9 +1,12 @@
 /**
- * store.js —— 虚拟实验室的 Zustand 全局状态与容器操作
+ * store.js —— 虚拟实验室的 Zustand 全局状态、实体几何与容器操作
  * ------------------------------------------------------------------
- * 容器统一模型：{ id, type, contents, temperature, color, ph, volume, capacity }
+ * 实体统一模型（简化 ECS）：{ id, type, dimensions, x, y, contents, temperature,
+ * color, ph, volume, capacity, open, clamp, ... }。几何判定不读 DOM：
+ *   boundsOf()  绝对包围盒      mouthPoint()  瓶口中心
+ *   overlaps()  AABB 相交       pourAlign()   倾倒对准（悬停 / 叠放 / canPour）
  * 加试剂、倾倒产生的混合都会先经过 reactions.js 的规则引擎（反应、沉淀、
- * 放气、放热、指示剂变色），再由 syncItem() 统一重算体积、颜色与 pH。
+ * 放气、放热、指示剂变色），再由 syncItem() 统一重算体积、颜色、pH 与浑浊度。
  */
 
 import { create } from 'zustand';
@@ -70,14 +73,46 @@ var UNEVEN_TEMPERATURE = 60;
  * 铁圈的椭圆心在 viewBox (53, 36)，换算成令牌坐标（SVG 92×120 居中、2px 上内边距）：
  *   x = 6 + 53 × 1.15 ≈ 67、y = 2 + 36 × 1.1538 ≈ 43.5
  * 容器松手时玻璃底中心离圈心小于 CLAMP_RADIUS，或直接落在铁架台上，就夹进去：
- * 夹住后 x 对准圈心、玻璃底落在圈心，再拖动容器才会解夹；移动铁架台时
- * 夹着的容器跟着一起走（见 moveItem）。夹在台上的容器离台面更高，火焰判定
+ * 夹住后 x 对准圈心、玻璃底落在圈心，容器进入锁定态（clamp / clampedTo），
+ * 不能再单独拖动，必须先「取下」（releaseClamp）；移动铁架台时夹着的容器
+ * 作为刚体跟着一起走（见 moveItem）。夹在台上的容器离台面更高，火焰判定
  * 放宽到 CLAMP_HEAT_GAP，把酒精灯放到试管正下方就能受热。
  */
 var STAND_RING_X = 67;
 var STAND_RING_Y = 43.5;
-var CLAMP_RADIUS = 46;
+/* 吸附半径：玻璃底中心到圈心的距离（等价于容器下半包围盒中心对到铁圈上）。 */
+var CLAMP_RADIUS = 30;
 var CLAMP_HEAT_GAP = 96;
+
+/* ---------------- 实体边界（简化 ECS） ----------------
+ * 每件器材都是一个实体：{ id, type, position(x,y), dimensions, state }。
+ * 令牌外框固定 104×128（92×120 的 SVG 居中 + 名称 / 读数两行文字），
+ * dimensions 直接挂在实体上，bounds / mouthPoint / overlaps / pourAlign
+ * 全部由 store 算出，页面不再用 DOM 尺寸做几何判断 —— 状态与画面永远一致。
+ */
+var ITEM_WIDTH = 104;
+var ITEM_HEIGHT = 128;
+
+/*
+ * 瓶口在令牌内的 y：由 Glass.jsx 的 viewBox 换算（y = 2 + viewBoxY × 1.1538）。
+ *   烧杯 rim 25.4 → 31.5；试管 / 锥形瓶 / 烧瓶 14 → 18.2；细口瓶 16 → 20.5
+ * 倾倒对准、水柱起点都用这张表，不看 SVG 实际渲染高度。
+ */
+var MOUTH_Y = {
+  beaker: 31.5,
+  'test-tube': 19,
+  erlenmeyer: 18.2,
+  'round-flask': 18.2,
+  'volumetric-flask': 18.2,
+  'reagent-bottle': 20.5
+};
+
+/* 倾倒对准：X 中心差 ≤ POUR_ALIGN_X，且两者中心高差 ≤ POUR_DROP_Y（松手叠放）。 */
+var POUR_ALIGN_X = 26;
+var POUR_DROP_Y = 46;
+/* 悬停对准：源瓶口必须高于目标瓶口 POUR_GAP_MIN~POUR_GAP_MAX，水柱才有落差。 */
+var POUR_GAP_MIN = 6;
+var POUR_GAP_MAX = 90;
 
 /* 倒液动画：倾斜 + 水柱 + 液面按进度上涨，走完才真正结算体积与反应。 */
 var POUR_DURATION = 1100;
@@ -85,18 +120,78 @@ var POUR_DURATION = 1100;
 /* 令牌几何对外暴露给页面：吸附石棉网 / 铁夹时页面要用同一套数值算落点。 */
 export var LAB_GEOMETRY = {
   tokenWidth: TOKEN_WIDTH,
+  itemWidth: ITEM_WIDTH,
+  itemHeight: ITEM_HEIGHT,
   vesselBaseY: VESSEL_BASE_Y,
   flameTipY: FLAME_TIP_Y,
   gauzeTopY: GAUZE_TOP_Y,
   gauzeBottomY: GAUZE_BOTTOM_Y,
   standRingX: STAND_RING_X,
   standRingY: STAND_RING_Y,
-  clampRadius: CLAMP_RADIUS
+  clampRadius: CLAMP_RADIUS,
+  pourAlignX: POUR_ALIGN_X,
+  pourDropY: POUR_DROP_Y
 };
 
 /* 铁圈圈心（画布坐标）：页面用它判断拖拽中的容器是否该吸到铁夹上。 */
 export function clampPoint(stand) {
   return { x: stand.x + STAND_RING_X, y: stand.y + STAND_RING_Y };
+}
+
+/* 实体的包围盒（绝对坐标）：碰撞、边界钳制、命中判定都读这里。 */
+export function boundsOf(item) {
+  return {
+    x: item.x,
+    y: item.y,
+    width: item.dimensions ? item.dimensions.width : ITEM_WIDTH,
+    height: item.dimensions ? item.dimensions.height : ITEM_HEIGHT
+  };
+}
+
+/* 容器瓶口中心（绝对坐标）：倾倒对准与水柱起点。 */
+export function mouthPoint(item) {
+  return {
+    x: item.x + ITEM_WIDTH / 2,
+    y: item.y + (MOUTH_Y[item.type] || 31.5)
+  };
+}
+
+/* AABB 相交：两件器材的外框是否真的叠在一起（用于「瓶口对上没有」之类粗判）。 */
+export function overlaps(a, b) {
+  var boxA = boundsOf(a);
+  var boxB = boundsOf(b);
+
+  return (
+    boxA.x < boxB.x + boxB.width &&
+    boxA.x + boxA.width > boxB.x &&
+    boxA.y < boxB.y + boxB.height &&
+    boxA.y + boxA.height > boxB.y
+  );
+}
+
+/*
+ * 倾倒对准判定（两个容器之间，纯几何）：
+ *   · dx   瓶口中心的水平偏差 —— 水柱要垂直落进瓶口，超过半个令牌宽就不算对准
+ *   · gap  源瓶口高出目标瓶口多少 —— 正值表示源在上方，有落差才能倒
+ *   悬停倾倒（aligned）：源瓶口高于目标瓶口 6~90px 且 dx 对齐，页面据此画对准框
+ *   松手叠放（droppable）：两容器外框基本重合（把容器直接拖到另一个容器上）
+ *   canPour = 两种手势任一成立 —— 提示与结算共用同一个结论，看到对准圈就一定能倒
+ */
+export function pourAlign(source, target) {
+  var from = mouthPoint(source);
+  var to = mouthPoint(target);
+  var dx = Math.abs(from.x - to.x);
+  var gap = to.y - from.y;
+  var aligned = dx <= POUR_ALIGN_X && gap >= POUR_GAP_MIN && gap <= POUR_GAP_MAX;
+  var droppable = dx <= POUR_ALIGN_X && Math.abs(source.y - target.y) <= POUR_DROP_Y;
+
+  return {
+    dx: Math.round(dx * 10) / 10,
+    gap: Math.round(gap * 10) / 10,
+    aligned: aligned,
+    droppable: droppable,
+    canPour: aligned || droppable
+  };
 }
 
 /* 一根火柴能燃多久：够从容走到酒精灯旁，又不会一直亮着。 */
@@ -299,6 +394,10 @@ function syncItem(item, contents, temperature) {
   var tint = indicatorTint(contents, ph);
   var nextTemperature =
     typeof temperature === 'number' ? Math.round(temperature * 10) / 10 : item.temperature;
+  /* 固体（尤其沉淀）越多，液体越浑浊：0 = 澄清，1 = 完全不透光。 */
+  var solidMass = contents.reduce(function (total, entry) {
+    return total + (entry.state === 'solid' ? entry.mass || 0 : 0);
+  }, 0);
 
   return Object.assign({}, item, {
     contents: contents,
@@ -306,6 +405,7 @@ function syncItem(item, contents, temperature) {
     color: tint || mixColor(contents),
     ph: ph,
     temperature: nextTemperature,
+    turbidity: Math.min(0.86, Math.round(solidMass * 14) / 100),
     boiling: isBoiling(contents, nextTemperature)
   });
 }
@@ -322,11 +422,14 @@ function createItem(source, point, index) {
     kind: source.kind,
     name: source.name,
     formula: source.formula || '',
+    /* 实体边界：碰撞检测与页面定位共用，令牌外框不含任何猜测 */
+    dimensions: { width: ITEM_WIDTH, height: ITEM_HEIGHT },
     x: Math.round(point ? point.x : fallbackX),
     y: Math.round(point ? point.y : fallbackY),
     contents: [],
     temperature: 25,
     color: '#ffffff',
+    turbidity: 0,
     ph: null,
     volume: 0,
     capacity: source.capacity || 0,
@@ -346,6 +449,7 @@ function createItem(source, point, index) {
     unevenWarned: false,
     gas: null,
     gasAt: 0,
+    gasTimes: 0,
     phenomenon: null,
     phenomenonAt: 0
   };
@@ -426,12 +530,14 @@ export var useLabStore = create(function (set, get) {
       next = Object.assign({}, next, {
         gas: gasEvent ? gasEvent.rule.gas.label : null,
         gasAt: gasEvent ? Date.now() : 0,
+        /* 同一条放气规则在一次操作里连发几次，气泡就画得更密（剧烈反应）。 */
+        gasTimes: gasEvent ? gasEvent.times : 0,
         phenomenon: last.rule.phenomenon,
         phenomenonAt: Date.now()
       });
 
       result.events.forEach(function (event) {
-        logs.push(['反应', describeReaction(event)]);
+        logs.push(['反应', '发生反应：' + describeReaction(event)]);
       });
 
       var gasText = describeGas(result.events);
@@ -488,20 +594,29 @@ export var useLabStore = create(function (set, get) {
 
     moveItem: function (id, x, y) {
       var item = findItem(get().items, id);
-      if (!item) return;
+      if (!item) return false;
+
+      /*
+       * 夹在铁架台上的容器是锁定实体：不能单独拖动，只能整体搬铁架台，
+       * 或者先按「取下」（releaseClamp）回到自由状态 —— 和真实实验里
+       * 试管夹住之后必须先松开夹具才能换位置一致。
+       */
+      if (item.clampedTo) {
+        addLog('警告', item.name + ' 已夹在铁架台上，先「取下」再移动。');
+        return false;
+      }
+
       var nextX = Math.round(x);
       var nextY = Math.round(y);
-      if (nextX === item.x && nextY === item.y) return;
+      if (nextX === item.x && nextY === item.y) return false;
 
       var dx = nextX - item.x;
       var dy = nextY - item.y;
-      var detached = null;
 
       /*
        * 移动后把器材排到数组末尾：DOM 顺序靠后，同层级时压在其它器材上面，
        * 符合“拿起来放到别处就该在最前面”的直觉。
-       * 铁架台是刚性整体：夹在上面的容器跟着一起平移，两者的相对位置不变；
-       * 反过来主动搬走容器，就等于把它从铁夹上取下来。
+       * 铁架台是刚性整体：夹在上面的容器跟着一起平移，两者的相对位置不变。
        */
       set(function (state) {
         var moved = [];
@@ -509,13 +624,7 @@ export var useLabStore = create(function (set, get) {
 
         state.items.forEach(function (entry) {
           if (entry.id === id) {
-            var next = Object.assign({}, entry, { x: nextX, y: nextY });
-            if (entry.clampedTo) {
-              detached = entry.name;
-              next.clamp = false;
-              next.clampedTo = null;
-            }
-            moved.push(next);
+            moved.push(Object.assign({}, entry, { x: nextX, y: nextY }));
             return;
           }
 
@@ -536,7 +645,7 @@ export var useLabStore = create(function (set, get) {
       });
 
       addLog('操作', '移动 ' + item.name + '。');
-      if (detached) addLog('操作', detached + ' 离开铁架台。');
+      return true;
     },
 
     selectItem: function (id) {
@@ -671,12 +780,13 @@ export var useLabStore = create(function (set, get) {
       return true;
     },
 
+    /* 「取下」：松开铁夹，容器留在原处变回自由实体，之后才能再拖动。 */
     releaseClamp: function (id) {
       var item = findItem(get().items, id);
       if (!item || !item.clampedTo) return false;
 
       replaceItem(Object.assign({}, item, { clamp: false, clampedTo: null }));
-      addLog('操作', item.name + ' 离开铁架台。');
+      addLog('操作', '从铁架台上取下 ' + item.name + '。');
       return true;
     },
 
@@ -690,6 +800,10 @@ export var useLabStore = create(function (set, get) {
       var container = findItem(items, containerId);
       var gauze = findItem(items, gauzeId);
       if (!container || !gauze) return false;
+      if (container.clampedTo) {
+        addLog('警告', container.name + ' 已夹在铁架台上，先「取下」再架到石棉网上。');
+        return false;
+      }
 
       get().moveItem(containerId, gauze.x, gauze.y + GAUZE_TOP_Y - VESSEL_BASE_Y - 2);
       addLog('操作', container.name + ' 架在石棉网上。');
@@ -715,7 +829,7 @@ export var useLabStore = create(function (set, get) {
       var nextGauze;
       var nextContainer = null;
 
-      if (burner) {
+      if (burner && !container.clampedTo) {
         nextGauze = Object.assign({}, gauze, {
           x: burner.x,
           y: Math.max(4, burner.y + FLAME_TIP_Y - GAUZE_BOTTOM_Y - 2)
@@ -725,6 +839,7 @@ export var useLabStore = create(function (set, get) {
           y: Math.max(4, nextGauze.y + GAUZE_TOP_Y - VESSEL_BASE_Y - 2)
         });
       } else {
+        /* 容器被铁夹锁住时只把网垫到它下面，不动容器的坐标。 */
         nextGauze = Object.assign({}, gauze, {
           x: container.x,
           y: Math.max(4, container.y + VESSEL_BASE_Y - GAUZE_TOP_Y - 2)
@@ -830,7 +945,13 @@ export var useLabStore = create(function (set, get) {
          */
         var expiredGas = !!item.gas && Date.now() - item.gasAt > GAS_DURATION;
         var base = expiredGas
-          ? Object.assign({}, item, { gas: null, gasAt: 0, phenomenon: null, phenomenonAt: 0 })
+          ? Object.assign({}, item, {
+              gas: null,
+              gasAt: 0,
+              gasTimes: 0,
+              phenomenon: null,
+              phenomenonAt: 0
+            })
           : item;
         if (expiredGas) changed = true;
 
@@ -1158,7 +1279,7 @@ export var useLabStore = create(function (set, get) {
         return !isLiquid(entry);
       });
       replaceItem(
-        syncItem(Object.assign({}, item, { gas: null, gasAt: 0 }), remaining, item.temperature)
+        syncItem(Object.assign({}, item, { gas: null, gasAt: 0, gasTimes: 0 }), remaining, item.temperature)
       );
       addLog('操作', '倒出 ' + number(volume) + 'mL 液体（' + item.name + '）。');
     },
@@ -1178,6 +1299,7 @@ export var useLabStore = create(function (set, get) {
             temperature: 25,
             gas: null,
             gasAt: 0,
+            gasTimes: 0,
             phenomenon: null,
             phenomenonAt: 0
           }),

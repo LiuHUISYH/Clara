@@ -18,7 +18,7 @@ wc -l index.html css/*.css js/*.js lab/src/* data/*.json
 | `css/base.css` | 512 |
 | `css/layout.css` | 440 |
 | `css/components.css` | 1,634 |
-| `css/pages.css` | 2,576 |
+| `css/pages.css` | 2,697 |
 | `js/utils.js` | 570 |
 | `js/storage.js` | 400 |
 | `js/data.js` | 325 |
@@ -29,35 +29,35 @@ wc -l index.html css/*.css js/*.js lab/src/* data/*.json
 | `js/molecule3d.js` | 985 |
 | `js/tools.js` | 765 |
 | `js/app.js` | 299 |
-| `lab/src/LabPage.jsx` | 1,027 |
-| `lab/src/Glass.jsx` | 455 |
+| `lab/src/LabPage.jsx` | 1,120 |
+| `lab/src/Glass.jsx` | 527 |
 | `lab/src/Vessel.jsx` | 307 |
 | `lab/src/library.js` | 89 |
 | `lab/src/reactions.js` | 625 |
-| `lab/src/main.jsx` | 37 |
-| `lab/src/store.js` | 1,192 |
+| `lab/src/main.jsx` | 45 |
+| `lab/src/store.js` | 1,311 |
 | `data/knowledge.json` | 1,098 |
 | `data/quiz.json` | 640 |
 | `data/molecules.json` | 2,551 |
 | `data/nameMap.json` | 55 |
 | `data/equations.json` | 414 |
-| **合计** | **18,659** |
+| **合计** | **19,072** |
 
 ## 二、分类汇总
 
 | 类别 | 行数 | 占比 |
 | --- | ---: | ---: |
 | HTML | 117 | 0.6% |
-| CSS | 5,162 | 27.7% |
-| JavaScript / JSX | 8,622 | 46.2% |
-| JSON 数据 | 4,758 | 25.5% |
-| **核心交付代码合计** | **18,659** | **100%** |
+| CSS | 5,283 | 27.7% |
+| JavaScript / JSX | 8,914 | 46.7% |
+| JSON 数据 | 4,758 | 24.9% |
+| **核心交付代码合计** | **19,072** | **100%** |
 
 ```
-18,659 ÷ 8,000 ≈ 2.33 倍
+19,072 ÷ 8,000 ≈ 2.38 倍
 ```
 
-超出 PRD 最低要求约 133%。
+超出 PRD 最低要求约 138%。
 
 ## 三、附加文件（不计入核心交付代码）
 
@@ -70,11 +70,11 @@ wc -l index.html css/*.css js/*.js lab/src/* data/*.json
 | `tools/syntax_check.js` | 74 | 逐文件语法与加载检查 |
 | `data/*.js`（5 个） | 30 | 自动生成的包装文件（每个 6 行） |
 | `package.json` | 18 | 实验室源码重建依赖与脚本 |
-| `lab/README.md` | 188 | 实验室分步说明与重建命令 |
+| `lab/README.md` | 232 | 实验室分步说明与重建命令 |
 | `lab/chem-lab.js` | 53 | esbuild 打包运行时（含第三方库与许可注释） |
-| **附加合计** | **1,785** | |
+| **附加合计** | **1,829** | |
 
-全部文件（含附加）总计：**20,444 行**。
+全部文件（含附加）总计：**20,901 行**。
 
 ## 四、统计口径说明
 

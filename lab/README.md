@@ -52,6 +52,27 @@
   夹持容器的火焰判定放宽到 `CLAMP_HEAT_GAP`（96px），把酒精灯放到试管正下方就能受热；
   **④ 读数与沸腾**：操作条新增 `Status: Open / Closed` 读数（带塞容器可点）、`Volume` 与 `Contents`
   字段，沸腾时液面从缓慢漂移换成 `lab-liquid-churn` 翻滚，气泡更密。
+- ✅ 交互增强步骤 7：把交互换成几何驱动 + 现象补全——
+  **① 实体边界（简化 ECS）**：每件器材都是 `{ id, type, position, dimensions, state }`，
+  `dimensions` 直接挂在实体上，`boundsOf()` / `mouthPoint()` / `overlaps()` / `pourAlign()`
+  全部由 store 用坐标算出，页面不再拿 DOM 尺寸做几何判断（`LAB_GEOMETRY` 对外暴露同一套数值，
+  调试可读 `window.CL.lab.pourAlign`）；
+  **② 倾倒改成几何对准**：`pourAlign()` 比较两个容器的**瓶口**——水平中心差 ≤ 26px
+  （`POUR_ALIGN_X`），且源瓶口高出目标瓶口 6–90px（悬停倾倒）或两容器外框基本叠住
+  （松手叠放，高差 ≤ 46px）；拖拽途中 `useDndMonitor` 实时算 `canPour`，目标容器套一圈虚线瓶口罩
+  （`.lab-vessel--pour-ready`）提示「松手就倒进去」，没对准（如横向偏 60px）只按摆放处理；
+  水柱的起点 / 落点也改用 `mouthPoint()`，线宽随转移量（2.2–3.8px）；
+  **③ 铁夹锁定**：吸附半径按规格收紧到 `CLAMP_RADIUS = 30`（玻璃底中心到圈心），
+  夹住后容器是锁定实体——`useDraggable` 被 `disabled`、`moveItem()` 直接拒绝并写「先「取下」再移动」，
+  指针变 `not-allowed`，副标题标「铁夹上」；操作条出现「取下」按钮（`releaseClamp()`）松开夹具后
+  才能继续拖动；石棉网也不会再把锁定的容器搬来搬去；
+  **④ 浑浊 / 水蒸气 / 絮状沉淀**：`syncItem()` 由固含量派生 `turbidity`，液体上叠一层冷灰白雾
+  （`640ms` 过渡，白底上也看得出「浑」）；沸腾时瓶口飘出 5 团模糊水蒸气（`lab-steam-rise`）；
+  沉淀堆体压矮到液面以下并撒 5 颗浮动颗粒（`lab-solid-mote`），絮状沉淀不再是一块干净色块；
+  气泡数量随反应剧烈程度（`gasTimes`）增加，气泡改成浅青灰 + 深描边，白底上也看得清；
+  **⑤ 极简工控读数**：底部日志换成仿终端深色面板（`#14171a`，绿色 `> ` 提示符、反应行绿色、
+  警告行琥珀色），操作条读数改为 `Vol / Temp / PH` + `Contents: [HCl 10mL]` 方括号列表，
+  反应日志统一以「发生反应：」开头。
 
 ## 已实现的交互细节
 
@@ -60,11 +81,12 @@
 | 器材 / 试剂库 | 6 个分类、31 项；点击分类折叠，点击条目直接放入实验台 |
 | 拖拽 | `@dnd-kit/core`：库里拖入画布、画布内自由移动（跟手幽灵 + 边界钳制 + 松手置顶）、试剂拖到容器上；`PointerSensor` 设 6px 起拖阈值，避免点击被当成拖动 |
 | 选中 | 点击器械出现底部操作条；Esc 或点击空白取消选中；拖动松手也会选中刚移动的器材 |
-| 容器状态 | `contents[]`（试剂、体积、温度）+ `volume` / `ph` / `color` / `temperature` / `open`，所有变更统一经过 `syncItem()` |
+| 容器状态 | `contents[]`（试剂、体积、温度）+ `volume` / `ph` / `color` / `temperature` / `turbidity` / `open`，所有变更统一经过 `syncItem()` |
+| 实体几何 | 每个实体带 `dimensions`（104×128）；`boundsOf()` 给绝对包围盒，`mouthPoint()` 由类型表换算瓶口中心（烧杯 31.5 / 试管 19 / 烧瓶 18.2 / 细口瓶 20.5），`overlaps()` 做 AABB 相交；`LAB_GEOMETRY` 与 `window.CL.lab` 暴露同一套数值供页面与自测复用 |
 | 瓶塞开合 | 带塞容器（试剂瓶）`stopper: true`、`open: false`；点画布上的瓶塞（`.lab-stopper__hit` 透明热区，`pointerdown` 拦截以免被当成拖拽）或操作条的 `Status` 读数调用 `toggleStopper()`；瓶塞按 `translate(-13px,-20px) rotate(15deg)` 抬离瓶口（320ms 过渡）；`pour()` / `addReagent()` / `dumpLiquid()` 都以 `open` 为前置条件，塞着时写「瓶塞没打开」警告 |
-| 倒液 | 容器互拖时指针进入目标中心 ±56×±64px 才倒液（目标高亮）；`startPour()` 起 1.1s 的 `pourFlow` 动画（源容器 38° 倾斜、目标液面按进度上涨、水柱 `stroke-dashoffset` 流动），结束再调 `pour()` 按容量部分转移、保留温度与 pH；只是令牌外框擦边重叠则按摆放处理 |
-| 倾倒动画 | `.lab-vessel--pouring` 让 `svg` 绕 `78% 84%` 转 38°（向左倒镜像成 `22% 84%` / -38°），`PourStream` 在画布上画一条 `Q` 曲线水柱（颜色 = `pourFlow.color`，虚线流动 + 落点水滴），目标容器用「显示体积 = 实际体积 + 进度 × 转移量」逐帧上涨，动画期间不写回 store，因此只结算一次 |
-| 铁架台吸附 | 容器松手时玻璃底中心到铁圈圈心（`clampPoint()`，令牌偏移 67 / 43.5）距离 < `CLAMP_RADIUS`（46px）或直接落在台上，`clampOnStand()` 把容器夹住（x 对准圈心、玻璃底落在圈心）；`moveItem()` 对铁架台做刚体平移，夹着的容器同步位移，搬走容器或移除铁架台即解夹 |
+| 倒液 | 容器互拖时用 `pourAlign()` 判瓶口：X 中心差 ≤ `POUR_ALIGN_X`（26px），且「悬停倾倒」源口高于目标口 6–90px 或「松手叠放」两容器中心高差 ≤ `POUR_DROP_Y`（46px）才算倒液（`canPour`）；目标容器高亮并在拖拽途中套上虚线瓶口罩；`startPour()` 起 1.1s 的 `pourFlow` 动画（源容器 38° 倾斜、目标液面按进度上涨、水柱 `stroke-dashoffset` 流动），结束再调 `pour()` 按容量部分转移、保留温度与 pH；没对准（如横向偏 60px）只按摆放处理 |
+| 倾倒动画 | `.lab-vessel--pouring` 让 `svg` 绕 `78% 84%` 转 38°（向左倒镜像成 `22% 84%` / -38°），`PourStream` 从 `mouthPoint(源)` 到 `mouthPoint(目标)` 画一条 `Q` 曲线水柱（颜色 = `pourFlow.color`、线宽 2.2–3.8px 随转移量，虚线流动 + 落点水滴），目标容器用「显示体积 = 实际体积 + 进度 × 转移量」逐帧上涨，动画期间不写回 store，因此只结算一次 |
+| 铁架台吸附 | 容器松手时玻璃底中心到铁圈圈心（`clampPoint()`，令牌偏移 67 / 43.5）距离 < `CLAMP_RADIUS`（30px）或直接落在台上，`clampOnStand()` 把容器夹住（x 对准圈心、玻璃底落在圈心）并进入锁定态：`useDraggable` 禁用、`moveItem()` 拒绝并记「先「取下」再移动」、指针 `not-allowed`；`moveItem()` 对铁架台做刚体平移，夹着的容器同步位移；「取下」（`releaseClamp()`）或移除铁架台才解锁 |
 | 点火 | 火柴是唯一的火源：`lightItem()` 里火柴划燃后燃烧 `MATCH_DURATION`（9 秒），`tickHeating()` 每秒刷新剩余秒数，燃尽自动熄灭；酒精灯只有台面上存在燃着的火柴时才能点燃（按钮或把火柴拖到灯上），灯帽随 `lit` 平移让位 |
 | 加热 | 酒精灯“点燃 / 熄灭”（需先用火柴划燃）；火焰碰撞判定（`inFlame()`）：容器中心与火焰中心横向偏差 < `FLAME_X_RANGE`（30px）、焰尖到容器玻璃底 −`FLAME_OVERLAP`（24px）~ `FLAME_GAP`（50px，夹在铁架台上的容器放宽到 `CLAMP_HEAT_GAP` 96px）；受热 `HEAT_RATE = 4°C/s`、降温 `COOL_RATE = 2°C/s`；液体止于 100°C（`boiling`），干烧止于 160°C |
 | 石棉网 | `heatSource()` 先查「架在火焰上的石棉网托着容器」（`gauzeInFlame()` + `onGauze()`，网面顶 y=57 / 底 y=80、横向 ±34px），再退回直接受热；隔网加热记 `evenHeat`，操作条显示「受热: 垫石棉网 · 均匀受热」；直接加热到 `UNEVEN_TEMPERATURE`（60°C）记一次「受热不均（建议垫上石棉网）」警告；石棉网拖到容器上由 `stackGauze()` 垫入（容器在火焰上时连容器一起抬起），容器拖到网上由 `standOnGauze()` 吸附 |
@@ -72,10 +94,32 @@
 | 规则表 | `RULES` 33 条：AgCl / BaSO₄ / Cu(OH)₂ 等沉淀，CO₃²⁻ + 2H⁺ 放气，Zn / Fe / Mg + 酸，Fe + Cu²⁺ 置换，H⁺ + OH⁻ 中和（放热至多 +65°C），沉淀 + 酸溶解，NaHCO₃ / Cu(OH)₂ / CaCO₃ 受热分解 |
 | 受热分解 | 规则带 `minTemperature`（NaHCO₃ / Cu(OH)₂ 80°C、CaCO₃ 120°C）；`tickHeating()` 每次升温后把温度传回 `reactContents()`，到点立即分解并写入日志，干烧到 160°C 上限后继续分解剩余固体 |
 | 指示剂 | 酚酞 pH > 8.2 变红、石蕊酸红碱蓝；颜色通过 `indicatorTint()` 覆盖液体填充色，pH 翻转时补一条日志 |
-| 现象反馈 | 三层火焰（外焰 / 中焰 / 焰心 + 底部光晕）带 `prefers-reduced-motion` 分支，火焰上架着容器时加 `lab-flame--in-use`（外焰更亮、光晕放大 1.28 倍，石棉网架在火焰上同样触发）；≥60°C 的容器描边转浅暖色；受热容器把说明文字移到右侧避让火焰（石棉网上的容器还会再让开网面）；沸腾时容器内 8 颗气泡以 1.05s 更快上升、液面改用 `lab-liquid-churn` 剧烈翻滚（`prefers-reduced-motion` 下静止），副标题显示「沸腾」；石棉网被火焰烤着时网格与垫子转暖色、底部透出 `lab-gauze__glow` 光晕、副标题显示「匀热中」；划燃的火柴复用同一套三层火苗，副标题显示「燃烧中 · 9s」并转暖色 |
-| 玻璃渲染 | `src/Glass.jsx`：浅灰描边 + 白色高光条 + 右缘厚度 + 内缘暗线 + 纵向薄雾；烧杯唇边 / 试管的椭圆开口 / 瓶口内弧；试剂瓶的短颈 + 玻璃瓶塞（塞芯、塞头、高光各一条 `<path>`，热区是一块透明 `rect`）；液体用内腔 `clip-path` 裁切，顶边是正弦波 `<path>`，液面缓慢漂移 |
+| 现象反馈 | 三层火焰（外焰 / 中焰 / 焰心 + 底部光晕）带 `prefers-reduced-motion` 分支，火焰上架着容器时加 `lab-flame--in-use`（外焰更亮、光晕放大 1.28 倍，石棉网架在火焰上同样触发）；≥60°C 的容器描边转浅暖色；受热容器把说明文字移到右侧避让火焰（石棉网上的容器还会再让开网面）；沸腾时气泡升到 9 颗、以 1.05s 更快上升，液面改用 `lab-liquid-churn` 剧烈翻滚，瓶口飘出 5 团模糊水蒸气（`lab-steam-rise`，`prefers-reduced-motion` 下静止），副标题显示「沸腾」；放气气泡数量随 `gasTimes`（同一次操作里规则触发次数）增加；沉淀堆体 + 5 颗浮动颗粒（`lab-solid-mote`）；石棉网被火焰烤着时网格与垫子转暖色、底部透出 `lab-gauze__glow` 光晕、副标题显示「匀热中」；划燃的火柴复用同一套三层火苗，副标题显示「燃烧中 · 9s」并转暖色 |
+| 数据读数 | 操作条用等宽字体给出 `Status: Open / Closed`、`Vol: 30mL | Temp: 100°C | PH: 5.0`、`Contents: [NaNO₃ 20mL + AgCl 10g + HCl 10mL]` 与受热 / 夹持状态；选中容器即刷新，沸腾、夹持、现象各有独立字段 |
+| 玻璃渲染 | `src/Glass.jsx`：浅灰描边 + 白色高光条 + 右缘厚度 + 内缘暗线 + 纵向薄雾；烧杯唇边 / 试管的椭圆开口 / 瓶口内弧；试剂瓶的短颈 + 玻璃瓶塞（塞芯、塞头、高光各一条 `<path>`，热区是一块透明 `rect`）；液体用内腔 `clip-path` 裁切，顶边是正弦波 `<path>`，液面缓慢漂移；固含量 > 0 时液体上叠一层冷灰白雾（`turbidity` 0–0.86，640ms 过渡） |
 | 酒精灯渲染 | `src/Vessel.jsx`：玻璃灯体（酒精液面随瓶身裁切）+ 2 段金属灯芯管 + 灯芯 + 灯帽；未点燃时灯帽扣在灯芯管上，点燃后平移 27×38 移到灯旁台面并淡入接触阴影 |
-| 日志 | 等宽日志控制台记录放置、移动、加试剂、开合瓶塞、倾斜倒液、划燃 / 熄灭火柴、点燃 / 熄灭酒精灯、夹持 / 解夹、受热、沸腾、降温等操作 |
+| 日志 | 仿终端深色控制台（`#14171a`）：等宽字、绿色 `> ` 提示符、反应行绿色 / 警告行琥珀色，记录放置、移动、加试剂、开合瓶塞、倾斜倒液、划燃 / 熄灭火柴、点燃 / 熄灭酒精灯、夹持 / 取下、受热、沸腾、降温等操作；反应日志统一以「发生反应：」开头（`describeReaction()` 文本 + 现象 + 注释） |
+
+## 实体几何与倾倒判定
+
+`lab/src/store.js` 的几何层是所有交互的唯一来源，页面只负责把结果画出来：
+
+| 导出 | 作用 |
+| --- | --- |
+| `ITEM_DIMENSIONS` / `item.dimensions` | 实体包围盒尺寸（104×128），随实体一起存在 Zustand 里 |
+| `boundsOf(item)` | 绝对坐标 AABB，用于命中、边界与重叠判断 |
+| `mouthPoint(item)` | 瓶口中心：`x = item.x + 52`，`y = item.y + MOUTH_Y[type]`（由 Glass 的 viewBox × 1.1538 换算） |
+| `overlaps(a, b)` | 两个实体的 AABB 是否相交 |
+| `pourAlign(source, target)` | 返回 `{ dx, gap, aligned, droppable, canPour }`：`aligned` 是「悬停倾倒」（源口高于目标口 6–90px 且 `dx ≤ 26`），`droppable` 是「松手叠放」（中心高差 ≤ 46px），`canPour` 是两者的并集 |
+| `clampPoint(stand)` | 铁圈圈心（令牌内 67 / 43.5），吸附半径 `CLAMP_RADIUS = 30` |
+
+`LabPage.jsx` 的 `labCollisionDetection()` 会把拖拽中的令牌矩形对回画布坐标（`dragOrigin()`），
+构造一个临时实体再和落点容器做 `pourAlign()`；`Workbench` 用 `useDndMonitor({ onDragMove })` 做同一件事，
+给命中的容器加 `.lab-vessel--pour-ready`（虚线瓶口罩）。因此**提示与结算永远是同一个结论**：
+看到对准圈松手一定倒得进去，没对准就只是摆放。
+
+`window.CL.lab` 另外暴露 `geometry` / `boundsOf` / `mouthPoint` / `pourAlign`，自测脚本可以直接复用，
+不必在测试里重算常量。
 
 ## 玻璃与液体渲染
 
