@@ -22,6 +22,7 @@ export const LAB_LIBRARY = [
     label: '辅助工具',
     items: [
       { id: 'burner', name: '酒精灯', kind: 'tool' },
+      { id: 'match', name: '火柴', kind: 'tool' },
       { id: 'stand', name: '铁架台', kind: 'tool' },
       { id: 'rod', name: '玻璃棒', kind: 'tool' },
       { id: 'dropper', name: '胶头滴管', kind: 'tool' },

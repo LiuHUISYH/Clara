@@ -1742,6 +1742,42 @@
   }
 }
 
+/* 燃着的火柴：火柴头冒小火苗，副标题转暖色，和酒精灯「燃烧中」呼应 */
+.lab-match__shadow {
+  fill: rgba(17, 24, 39, 0.08);
+}
+
+.lab-match__stick,
+.lab-match__stick-shine {
+  fill: none;
+  stroke: #c8a878;
+  stroke-linecap: round;
+}
+
+.lab-match__stick {
+  stroke-width: 4.4;
+}
+
+.lab-match__stick-shine {
+  stroke: #e3caa0;
+  stroke-width: 1.2;
+}
+
+.lab-match__head {
+  fill: #b4564a;
+  stroke: #8f4038;
+  stroke-width: 0.8;
+}
+
+/* 小火焰压在火柴头上一点点，看起来就像从头上烧起来 */
+.lab-match__flame {
+  transform: translateY(0.6px);
+}
+
+.lab-vessel--lit .lab-vessel__sub {
+  color: #9c4a24;
+}
+
 /* 被加热到 60°C 以上的容器：玻璃描边转为浅暖色，副标题标出温度 */
 .lab-vessel--hot .lab-vessel__svg {
   color: #c1a582;

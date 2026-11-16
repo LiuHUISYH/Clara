@@ -42,6 +42,8 @@ function withinPourRange(point, targetRect) {
  * 指针落在容器上时优先命中容器，否则落回整张实验台。
  * 实验台上的容器互拖时还要校验距离：擦边重叠只是摆放，压到中心才倒液。
  * 从器材库拖出来的试剂 / 器材不受影响，落点只要在容器内就生效。
+ * 酒精灯也是落点，但只认火柴：把火柴凑到灯芯上才点亮，其它器材压上去
+ * 仍然只是摆放，免得「把烧杯架到火焰上」被误判成倒液。
  */
 function labCollisionDetection(args) {
   var hits = pointerWithin(args);
@@ -49,6 +51,7 @@ function labCollisionDetection(args) {
 
   var data = args.active.data.current;
   var fromBench = !!data && data.kind === 'bench-item';
+  var isMatch = !!data && !!data.item && data.item.type === 'match';
   var activeRect = args.active.rect.current ? args.active.rect.current.translated : null;
   var point = args.pointerCoordinates || rectCentre(activeRect);
   var rest = [];
@@ -56,6 +59,12 @@ function labCollisionDetection(args) {
   for (var i = 0; i < hits.length; i += 1) {
     if (String(hits[i].id).indexOf(TARGET_PREFIX) !== 0) {
       rest.push(hits[i]);
+      continue;
+    }
+
+    var targetItem = benchItemById(String(hits[i].id).slice(TARGET_PREFIX.length));
+    if (!targetItem || targetItem.kind !== 'container') {
+      if (isMatch && targetItem && targetItem.type === 'burner') return [hits[i]];
       continue;
     }
 
@@ -70,7 +79,10 @@ function labCollisionDetection(args) {
 /* 器材副标题：容器的温度 / 沸腾 / 体积，工具的燃烧状态。 */
 function itemSubText(item) {
   if (item.kind !== 'container') {
-    return item.type === 'burner' && item.lit ? '燃烧中' : '工具';
+    if (item.type === 'match') {
+      return item.lit ? '燃烧中 · ' + item.matchLeft + 's' : '未点燃';
+    }
+    return item.type === 'burner' ? (item.lit ? '燃烧中' : '未点燃') : '工具';
   }
 
   var body;
@@ -90,6 +102,25 @@ function itemSubText(item) {
     (item.boiling ? '沸腾 · ' : '') +
     body
   );
+}
+
+/*
+ * 工具的状态文案。酒精灯必须用燃着的火柴点燃，所以未点燃时按台面上有没有
+ * 火源给出不同的下一步；火柴自己则报出剩余燃烧秒数。
+ */
+function toolStatus(item, matchBurning) {
+  if (item.type === 'match') {
+    return item.lit
+      ? '状态: 燃烧中 · 剩 ' + item.matchLeft + ' 秒，趁现在点燃酒精灯'
+      : '状态: 未点燃 · 划燃后把火柴凑到灯芯上';
+  }
+
+  if (item.type === 'burner') {
+    if (item.lit) return '状态: 燃烧中 · 把容器架到火焰上即可加热';
+    return matchBurning ? '状态: 未点燃 · 用燃着的火柴点燃' : '状态: 未点燃 · 先用火柴划燃';
+  }
+
+  return '工具';
 }
 
 /*
@@ -119,6 +150,15 @@ function targetId(over) {
   if (!over) return null;
   var id = String(over.id);
   return id.indexOf(TARGET_PREFIX) === 0 ? id.slice(TARGET_PREFIX.length) : null;
+}
+
+/* 按 id 取台面上的器材：碰撞检测与拖拽结算都要知道落点是容器还是酒精灯。 */
+function benchItemById(id) {
+  var items = useLabStore.getState().items;
+  for (var i = 0; i < items.length; i += 1) {
+    if (items[i].id === id) return items[i];
+  }
+  return null;
 }
 
 /* ============================ 左侧：器材库 ============================ */
@@ -209,8 +249,8 @@ function BenchItem(props) {
   });
   var drop = useDroppable({
     id: TARGET_PREFIX + item.id,
-    data: { kind: 'container', id: item.id },
-    disabled: item.kind !== 'container'
+    data: { kind: item.kind, id: item.id },
+    disabled: item.kind !== 'container' && item.type !== 'burner'
   });
 
   function setNode(node) {
@@ -225,6 +265,7 @@ function BenchItem(props) {
   if (item.kind === 'container') className += ' lab-vessel--container';
   else className += ' lab-vessel--tool';
   if (item.kind === 'container' && item.temperature >= 60) className += ' lab-vessel--hot';
+  if (item.lit) className += ' lab-vessel--lit';
   if (item.heating) className += ' lab-vessel--heating';
   if (item.boiling) className += ' lab-vessel--boiling';
 
@@ -339,8 +380,11 @@ function BenchActions(props) {
   var removeItem = useLabStore(function (state) {
     return state.removeItem;
   });
-  var toggleBurner = useLabStore(function (state) {
-    return state.toggleBurner;
+  var lightItem = useLabStore(function (state) {
+    return state.lightItem;
+  });
+  var items = useLabStore(function (state) {
+    return state.items;
   });
 
   var activeId = item ? item.id : null;
@@ -355,6 +399,9 @@ function BenchActions(props) {
 
   var isContainer = item.kind === 'container';
   var phText = item.ph === null ? '--' : item.ph.toFixed(1);
+  var matchBurning = items.some(function (entry) {
+    return entry.type === 'match' && entry.lit && entry.litUntil > Date.now();
+  });
 
   return (
     <div className="lab-bench__actions" onClick={function (event) { event.stopPropagation(); }}>
@@ -365,13 +412,7 @@ function BenchActions(props) {
             Temp: {item.temperature}°C | PH: {phText} | Vol: {item.volume}mL
           </span>
         ) : (
-          <span className="lab-actions__line">
-            {item.type === 'burner'
-              ? item.lit
-                ? '状态: 燃烧中 · 把容器架到火焰上即可加热'
-                : '状态: 未点燃'
-              : '工具'}
-          </span>
+          <span className="lab-actions__line">{toolStatus(item, matchBurning)}</span>
         )}
         {isContainer ? (
           <span className="lab-actions__contents">内容: {contentText(item.contents)}</span>
@@ -425,16 +466,16 @@ function BenchActions(props) {
         </div>
       ) : (
         <div className="lab-actions__buttons">
-          {item.type === 'burner' ? (
+          {item.type === 'burner' || item.type === 'match' ? (
             <button
               className={'lab-action' + (item.lit ? ' lab-action--active' : '')}
               type="button"
               aria-pressed={!!item.lit}
               onClick={function () {
-                toggleBurner(item.id);
+                lightItem(item.id);
               }}
             >
-              {item.lit ? '熄灭' : '点燃'}
+              {item.lit ? '熄灭' : item.type === 'match' ? '划燃' : '点燃'}
             </button>
           ) : null}
           <button
@@ -550,6 +591,7 @@ function DragPreview(props) {
     var item = data.item;
     var ghostClass = 'lab-drag-ghost';
     if (item.kind === 'container' && item.temperature >= 60) ghostClass += ' lab-vessel--hot';
+    if (item.lit) ghostClass += ' lab-vessel--lit';
     if (item.heating) ghostClass += ' lab-vessel--heating';
     if (item.boiling) ghostClass += ' lab-vessel--boiling';
 
@@ -592,6 +634,9 @@ function LabPage() {
   });
   const pour = useLabStore(function (state) {
     return state.pour;
+  });
+  const lightItem = useLabStore(function (state) {
+    return state.lightItem;
   });
   const selectItem = useLabStore(function (state) {
     return state.selectItem;
@@ -640,9 +685,24 @@ function LabPage() {
       /* 松手即选中：操作条立刻切到刚移动的器材，方便接着加试剂 / 点燃。 */
       selectItem(data.id);
 
-      if (target && target !== data.id && data.item.kind === 'container') {
-        pour(data.id, target);
-        return;
+      if (target && target !== data.id) {
+        var targetItem = benchItemById(target);
+
+        /*
+         * 拿着火柴凑到酒精灯上：能点就点（火柴得先划燃，没燃会记一条警告），
+         * 点完火柴留在落点，顺手也就完成了一次摆放。
+         */
+        if (data.item.type === 'match' && targetItem && targetItem.type === 'burner' && !targetItem.lit) {
+          lightItem(target);
+          var spot = dragPoint(canvasRef.current, event);
+          moveItem(data.id, spot.x, spot.y);
+          return;
+        }
+
+        if (targetItem && targetItem.kind === 'container' && data.item.kind === 'container') {
+          pour(data.id, target);
+          return;
+        }
       }
 
       if (over.id === 'bench' || target) {

@@ -2,8 +2,9 @@
  * Vessel.jsx —— 虚拟实验室的器材出口：容器交给 Glass.jsx，工具在这里画
  * ------------------------------------------------------------------
  * 容器（烧杯 / 试管 / 锥形瓶 / 圆底烧瓶 / 容量瓶）是玻璃仪器 + 液体 + 沉淀，
- * 统一由 Glass.jsx 用 SVG 绘制；本文件画酒精灯（玻璃灯体 + 灯帽 + 三层火焰）
- * 与铁架台、玻璃棒、胶头滴管、石棉网、pH 试纸，并提供 LabGraphic 出口。
+ * 统一由 Glass.jsx 用 SVG 绘制；本文件画酒精灯（玻璃灯体 + 灯帽 + 三层火焰）、
+ * 火柴（梗 + 火柴头 + 划燃后的小火苗）与铁架台、玻璃棒、胶头滴管、石棉网、
+ * pH 试纸，并提供 LabGraphic 出口。
  * 白底玻璃统一走「浅灰描边 + 白色高光 + 右缘厚度」的做法，不引入深色。
  */
 import React from 'react';
@@ -119,6 +120,48 @@ function BurnerGraphic(props) {
   );
 }
 
+/*
+ * 火柴：木梗斜靠 + 深红火柴头；划燃后火柴头上冒出三层小火苗。
+ * 火焰复用酒精灯的 lab-flame__outer / mid / core 造型与摇曳动画，
+ * 只是缩到火柴头的尺度，视觉上同源、不用另写一套动画。
+ */
+function MatchGraphic(props) {
+  var burning = !!props.burning;
+
+  return (
+    <g className="lab-match">
+      <ellipse className="lab-match__shadow" cx="36" cy="90.4" rx="15" ry="2.2" />
+
+      {/* 木梗：主料 + 一道高光 */}
+      <path className="lab-match__stick" d="M24 89.4 L47.4 32.6" />
+      <path className="lab-match__stick-shine" d="M25.8 87.6 L46.2 36.8" />
+
+      {/* 火柴头 */}
+      <path
+        className="lab-match__head"
+        d="M50.6 27.8 Q54.2 31.6 51.4 35.6 Q47.6 36.4 46.4 32.6 Q46.6 28.6 50.6 27.8 Z"
+      />
+
+      {burning ? (
+        <g className="lab-flame lab-match__flame" aria-hidden="true">
+          <path
+            className="lab-flame__outer"
+            d="M49.6 28.4 C52.2 23.4 53.6 20.2 49.8 12.8 C45.8 20.2 47.6 23.4 49.6 28.4 Z"
+          />
+          <path
+            className="lab-flame__mid"
+            d="M49.6 27.6 C51 23.6 51.8 21.4 49.8 16.6 C47.8 21.4 48.6 23.6 49.6 27.6 Z"
+          />
+          <path
+            className="lab-flame__core"
+            d="M49.6 26.8 C50.4 24.4 50.8 22.8 49.8 20.4 C48.8 22.8 49 24.4 49.6 26.8 Z"
+          />
+        </g>
+      ) : null}
+    </g>
+  );
+}
+
 function StandGraphic() {
   return (
     <g className="lab-tool-drawing">
@@ -186,6 +229,7 @@ function ToolGraphic(props) {
         <BurnerGraphic lit={!!item.lit} inUse={!!item.inUse} prefix={prefix} />
       ) : null}
       {type === 'stand' ? <StandGraphic /> : null}
+      {type === 'match' ? <MatchGraphic burning={!!item.lit} /> : null}
       {type === 'rod' ? <RodGraphic /> : null}
       {type === 'dropper' ? <DropperGraphic /> : null}
       {type === 'wire-gauze' ? <GauzeGraphic /> : null}

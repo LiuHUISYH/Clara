@@ -46,6 +46,9 @@ var AMBIENT = 25;
 var BOIL_POINT = 100;
 var DRY_LIMIT = 160;
 
+/* 一根火柴能燃多久：够从容走到酒精灯旁，又不会一直亮着。 */
+var MATCH_DURATION = 9000;
+
 var ITEM_SERIAL = 0;
 var LOG_SERIAL = 0;
 
@@ -230,6 +233,8 @@ function createItem(source, point, index) {
     volume: 0,
     capacity: source.capacity || 0,
     lit: false,
+    litUntil: 0,
+    matchLeft: 0,
     inUse: false,
     heating: false,
     boiling: false,
@@ -247,6 +252,17 @@ function reagentLabel(reagent) {
 function findItem(items, id) {
   for (var i = 0; i < items.length; i += 1) {
     if (items[i].id === id) return items[i];
+  }
+  return null;
+}
+
+/* 台面上是否有一根还燃着的火柴：酒精灯点火的前提。 */
+function burningMatch(items) {
+  var now = Date.now();
+
+  for (var i = 0; i < items.length; i += 1) {
+    var item = items[i];
+    if (item.type === 'match' && item.lit && item.litUntil > now) return item;
   }
   return null;
 }
@@ -417,18 +433,49 @@ export var useLabStore = create(function (set, get) {
       set({ selectedId: null });
     },
 
-    /* 点燃 / 熄灭酒精灯。返回点燃后的状态。 */
-    toggleBurner: function (id) {
-      var item = findItem(get().items, id);
-      if (!item || item.type !== 'burner') {
-        addLog('警告', '只有酒精灯可以点燃。');
+    /*
+     * 点燃 / 熄灭可以点火的东西，返回操作后的点燃状态。
+     * 火柴本身是火源：划燃后只能烧 MATCH_DURATION 毫秒，燃尽自动熄灭；
+     * 酒精灯必须用还燃着的火柴点，于是顺序是「取出火柴 → 划燃 → 点燃酒精灯」，
+     * 和真实实验里的操作一致。灯帽的移开动画由 Vessel.jsx 按 lit 状态播放。
+     */
+    lightItem: function (id) {
+      var items = get().items;
+      var item = findItem(items, id);
+      if (!item) return false;
+
+      if (item.type === 'match') {
+        var strike = !item.lit;
+        replaceItem(
+          Object.assign({}, item, {
+            lit: strike,
+            litUntil: strike ? Date.now() + MATCH_DURATION : 0,
+            matchLeft: strike ? Math.round(MATCH_DURATION / 1000) : 0
+          })
+        );
+        addLog('操作', (strike ? '划燃 ' : '熄灭 ') + item.name + '。');
+        return strike;
+      }
+
+      if (item.type !== 'burner') {
+        addLog('警告', '只有火柴和酒精灯可以点燃。');
         return false;
       }
 
-      var lit = !item.lit;
-      replaceItem(Object.assign({}, item, { lit: lit, inUse: lit ? !!item.inUse : false }));
-      addLog('操作', (lit ? '点燃 ' : '熄灭 ') + item.name + '。');
-      return lit;
+      if (item.lit) {
+        replaceItem(Object.assign({}, item, { lit: false, inUse: false }));
+        addLog('操作', '熄灭 ' + item.name + '。');
+        return false;
+      }
+
+      if (!burningMatch(items)) {
+        addLog('警告', item.name + ' 要用火柴点燃：先取出火柴并划燃。');
+        return false;
+      }
+
+      replaceItem(Object.assign({}, item, { lit: true }));
+      addLog('操作', '用火柴点燃 ' + item.name + '。');
+      return true;
     },
 
     /*
@@ -459,6 +506,22 @@ export var useLabStore = create(function (set, get) {
       var changed = false;
 
       var nextItems = state.items.map(function (item) {
+        /* 火柴：每秒刷新剩余燃烧时间，燃尽后自动熄灭。 */
+        if (item.type === 'match') {
+          if (!item.lit) return item;
+
+          var matchLeft = Math.max(0, Math.ceil((item.litUntil - Date.now()) / 1000));
+          if (matchLeft <= 0) {
+            changed = true;
+            logs.push(['操作', '火柴 燃尽了。']);
+            return Object.assign({}, item, { lit: false, litUntil: 0, matchLeft: 0 });
+          }
+          if (matchLeft === item.matchLeft) return item;
+
+          changed = true;
+          return Object.assign({}, item, { matchLeft: matchLeft });
+        }
+
         /* 酒精灯：火焰上是否架着容器，决定光晕强弱。 */
         if (item.type === 'burner') {
           var inUse = !!item.lit && !!flameInUse[item.id];
