@@ -67,7 +67,7 @@
       }, 200));
     }
 
-    // 键盘快捷键：按 g 后再按 h/c/q/w/m/t 跳转
+    // 键盘快捷键：按 g 后再按 h/c/q/w/m/l/t 跳转
     var pendingG = false;
     var pendingTimer = null;
     document.addEventListener('keydown', function (event) {
@@ -83,7 +83,7 @@
       }
 
       if (pendingG) {
-        var map = { h: '/home', c: '/chapters', q: '/quiz', w: '/wrongbook', m: '/molecule', t: '/tools' };
+        var map = { h: '/home', c: '/chapters', q: '/quiz', w: '/wrongbook', m: '/molecule', l: '/lab', t: '/tools' };
         var target = map[event.key.toLowerCase()];
         pendingG = false;
         if (target) {
@@ -222,6 +222,10 @@
 
     CL.router.register('/molecule/:query', function (params) {
       CL.molecule.render(params);
+    });
+
+    CL.router.register('/lab', function () {
+      CL.lab.render();
     });
 
     CL.router.register('/tools', function (params) {

@@ -15,6 +15,7 @@
   var baseTitle = 'ChemLearn · AP 化学学习平台';
   var currentRoute = null;
   var notFoundHandler = null;
+  var leaveHandler = null;
 
   /** 注册一条路由 */
   function register(pattern, handler) {
@@ -29,6 +30,12 @@
   /** 注册 404 处理函数 */
   function setNotFound(handler) {
     notFoundHandler = handler;
+    return CL.router;
+  }
+
+  /** 注册离开当前路由时的清理函数（用于卸载实验室的 React 根节点） */
+  function onLeave(handler) {
+    leaveHandler = handler;
     return CL.router;
   }
 
@@ -96,6 +103,7 @@
       quiz: 'quiz',
       wrongbook: 'wrongbook',
       molecule: 'molecule',
+      lab: 'lab',
       tools: 'tools',
       home: 'home'
     };
@@ -114,6 +122,16 @@
 
   /** 渲染当前路由 */
   function render() {
+    if (leaveHandler) {
+      var cleanup = leaveHandler;
+      leaveHandler = null;
+      try {
+        cleanup();
+      } catch (error) {
+        console.warn('[router] 路由清理失败：', error);
+      }
+    }
+
     var parsed = parseHash();
     var matched = matchRoute(parsed.segments);
 
@@ -190,6 +208,7 @@
   CL.router = {
     register: register,
     setNotFound: setNotFound,
+    onLeave: onLeave,
     navigate: navigate,
     render: render,
     start: start,
