@@ -18,7 +18,7 @@ wc -l index.html css/*.css js/*.js lab/src/* data/*.json
 | `css/base.css` | 512 |
 | `css/layout.css` | 440 |
 | `css/components.css` | 1,634 |
-| `css/pages.css` | 2,552 |
+| `css/pages.css` | 2,576 |
 | `js/utils.js` | 570 |
 | `js/storage.js` | 400 |
 | `js/data.js` | 325 |
@@ -41,20 +41,20 @@ wc -l index.html css/*.css js/*.js lab/src/* data/*.json
 | `data/molecules.json` | 2,551 |
 | `data/nameMap.json` | 55 |
 | `data/equations.json` | 414 |
-| **合计** | **18,635** |
+| **合计** | **18,659** |
 
 ## 二、分类汇总
 
 | 类别 | 行数 | 占比 |
 | --- | ---: | ---: |
 | HTML | 117 | 0.6% |
-| CSS | 5,138 | 27.6% |
-| JavaScript / JSX | 8,622 | 46.3% |
+| CSS | 5,162 | 27.7% |
+| JavaScript / JSX | 8,622 | 46.2% |
 | JSON 数据 | 4,758 | 25.5% |
-| **核心交付代码合计** | **18,635** | **100%** |
+| **核心交付代码合计** | **18,659** | **100%** |
 
 ```
-18,635 ÷ 8,000 ≈ 2.33 倍
+18,659 ÷ 8,000 ≈ 2.33 倍
 ```
 
 超出 PRD 最低要求约 133%。
@@ -74,7 +74,7 @@ wc -l index.html css/*.css js/*.js lab/src/* data/*.json
 | `lab/chem-lab.js` | 53 | esbuild 打包运行时（含第三方库与许可注释） |
 | **附加合计** | **1,785** | |
 
-全部文件（含附加）总计：**20,420 行**。
+全部文件（含附加）总计：**20,444 行**。
 
 ## 四、统计口径说明
 
