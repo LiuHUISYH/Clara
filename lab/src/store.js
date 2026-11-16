@@ -66,14 +66,38 @@ var GAUZE_FLAME_OVERLAP = 12;
 /* 直接受热到这个温度就开始受热不均，记一条建议垫石棉网的警告。 */
 var UNEVEN_TEMPERATURE = 60;
 
-/* 令牌几何对外暴露给页面：吸附石棉网时页面要用同一套数值算落点。 */
+/* ---------------- 铁架台夹持 ----------------
+ * 铁圈的椭圆心在 viewBox (53, 36)，换算成令牌坐标（SVG 92×120 居中、2px 上内边距）：
+ *   x = 6 + 53 × 1.15 ≈ 67、y = 2 + 36 × 1.1538 ≈ 43.5
+ * 容器松手时玻璃底中心离圈心小于 CLAMP_RADIUS，或直接落在铁架台上，就夹进去：
+ * 夹住后 x 对准圈心、玻璃底落在圈心，再拖动容器才会解夹；移动铁架台时
+ * 夹着的容器跟着一起走（见 moveItem）。夹在台上的容器离台面更高，火焰判定
+ * 放宽到 CLAMP_HEAT_GAP，把酒精灯放到试管正下方就能受热。
+ */
+var STAND_RING_X = 67;
+var STAND_RING_Y = 43.5;
+var CLAMP_RADIUS = 46;
+var CLAMP_HEAT_GAP = 96;
+
+/* 倒液动画：倾斜 + 水柱 + 液面按进度上涨，走完才真正结算体积与反应。 */
+var POUR_DURATION = 1100;
+
+/* 令牌几何对外暴露给页面：吸附石棉网 / 铁夹时页面要用同一套数值算落点。 */
 export var LAB_GEOMETRY = {
   tokenWidth: TOKEN_WIDTH,
   vesselBaseY: VESSEL_BASE_Y,
   flameTipY: FLAME_TIP_Y,
   gauzeTopY: GAUZE_TOP_Y,
-  gauzeBottomY: GAUZE_BOTTOM_Y
+  gauzeBottomY: GAUZE_BOTTOM_Y,
+  standRingX: STAND_RING_X,
+  standRingY: STAND_RING_Y,
+  clampRadius: CLAMP_RADIUS
 };
+
+/* 铁圈圈心（画布坐标）：页面用它判断拖拽中的容器是否该吸到铁夹上。 */
+export function clampPoint(stand) {
+  return { x: stand.x + STAND_RING_X, y: stand.y + STAND_RING_Y };
+}
 
 /* 一根火柴能燃多久：够从容走到酒精灯旁，又不会一直亮着。 */
 var MATCH_DURATION = 9000;
@@ -93,7 +117,9 @@ export function inFlame(item, burner) {
   if (Math.abs(dx) >= FLAME_X_RANGE) return false;
 
   var gap = burner.y + FLAME_TIP_Y - (item.y + VESSEL_BASE_Y);
-  return gap <= FLAME_GAP && gap >= -FLAME_OVERLAP;
+  /* 夹在铁架台上的容器架得更高，酒精灯放在下方时间距自然更大。 */
+  var reach = item.clamp ? CLAMP_HEAT_GAP : FLAME_GAP;
+  return gap <= reach && gap >= -FLAME_OVERLAP;
 }
 
 /* 石棉网是否架在火焰上：网面中心对准焰心，网底落在焰尖附近（可以稍微探进去）。 */
@@ -308,6 +334,11 @@ function createItem(source, point, index) {
     litUntil: 0,
     matchLeft: 0,
     inUse: false,
+    /* 带塞容器的开合状态：试剂瓶默认塞着，试管烧杯这类敞口容器恒为 true。 */
+    open: !source.stopper,
+    stopper: !!source.stopper,
+    clamp: false,
+    clampedTo: null,
     heating: false,
     boiling: false,
     hot: false,
@@ -429,6 +460,8 @@ export var useLabStore = create(function (set, get) {
     items: [],
     selectedId: null,
     logs: [bootLog],
+    /* 进行中的倾倒动画：{ sourceId, targetId, amount, color, progress, startedAt } */
+    pourFlow: null,
 
     addLog: addLog,
 
@@ -460,21 +493,50 @@ export var useLabStore = create(function (set, get) {
       var nextY = Math.round(y);
       if (nextX === item.x && nextY === item.y) return;
 
+      var dx = nextX - item.x;
+      var dy = nextY - item.y;
+      var detached = null;
+
       /*
        * 移动后把器材排到数组末尾：DOM 顺序靠后，同层级时压在其它器材上面，
        * 符合“拿起来放到别处就该在最前面”的直觉。
+       * 铁架台是刚性整体：夹在上面的容器跟着一起平移，两者的相对位置不变；
+       * 反过来主动搬走容器，就等于把它从铁夹上取下来。
        */
       set(function (state) {
-        var moved = null;
-        var rest = state.items.filter(function (entry) {
-          if (entry.id !== id) return true;
-          moved = Object.assign({}, entry, { x: nextX, y: nextY });
-          return false;
+        var moved = [];
+        var rest = [];
+
+        state.items.forEach(function (entry) {
+          if (entry.id === id) {
+            var next = Object.assign({}, entry, { x: nextX, y: nextY });
+            if (entry.clampedTo) {
+              detached = entry.name;
+              next.clamp = false;
+              next.clampedTo = null;
+            }
+            moved.push(next);
+            return;
+          }
+
+          if (item.type === 'stand' && entry.clampedTo === id) {
+            moved.push(
+              Object.assign({}, entry, {
+                x: entry.x + dx,
+                y: Math.max(4, entry.y + dy)
+              })
+            );
+            return;
+          }
+
+          rest.push(entry);
         });
 
-        return moved ? { items: rest.concat(moved) } : {};
+        return { items: rest.concat(moved) };
       });
+
       addLog('操作', '移动 ' + item.name + '。');
+      if (detached) addLog('操作', detached + ' 离开铁架台。');
     },
 
     selectItem: function (id) {
@@ -494,9 +556,15 @@ export var useLabStore = create(function (set, get) {
 
       set(function (state) {
         return {
-          items: state.items.filter(function (entry) {
-            return entry.id !== id;
-          }),
+          items: state.items
+            .filter(function (entry) {
+              return entry.id !== id;
+            })
+            .map(function (entry) {
+              /* 拆走铁架台时，夹在上面的容器一并放开，不会留下悬空的器材。 */
+              if (entry.clampedTo !== id) return entry;
+              return Object.assign({}, entry, { clamp: false, clampedTo: null });
+            }),
           selectedId: state.selectedId === id ? null : state.selectedId
         };
       });
@@ -550,6 +618,65 @@ export var useLabStore = create(function (set, get) {
 
       replaceItem(Object.assign({}, item, { lit: true }));
       addLog('操作', '用火柴点燃 ' + item.name + '。');
+      return true;
+    },
+
+    /*
+     * 开合瓶塞：带塞容器（试剂瓶）默认塞着，倒液与加试剂都被 open 门禁挡住；
+     * 试管、烧杯这类敞口容器没有塞子，open 恒为 true，行为与之前一致。
+     */
+    toggleStopper: function (id) {
+      var item = findItem(get().items, id);
+      if (!item) return false;
+      if (!item.stopper) {
+        addLog('警告', item.name + ' 没有瓶塞可开合。');
+        return false;
+      }
+
+      var open = !item.open;
+      replaceItem(Object.assign({}, item, { open: open }));
+      addLog('操作', (open ? '打开 ' : '塞上 ') + item.name + ' 的瓶塞。');
+      return open;
+    },
+
+    /*
+     * 把容器夹到铁架台的铁圈上：x 对准圈心，玻璃底落在圈心高度。
+     * 夹住后 clampedTo 记住铁架台，移动铁架台时容器跟着走（见 moveItem）；
+     * 加热判定也放宽（见 inFlame），酒精灯放在下方就能把试管烧起来。
+     */
+    clampOnStand: function (containerId, standId) {
+      var items = get().items;
+      var container = findItem(items, containerId);
+      var stand = findItem(items, standId);
+      if (!container || !stand) return false;
+      if (container.kind !== 'container' || stand.type !== 'stand') return false;
+      if (container.clampedTo === standId) return false;
+
+      var next = Object.assign({}, container, {
+        x: Math.round(stand.x + STAND_RING_X - TOKEN_WIDTH / 2),
+        y: Math.round(Math.max(4, stand.y + STAND_RING_Y - VESSEL_BASE_Y)),
+        clamp: true,
+        clampedTo: stand.id
+      });
+
+      set(function (current) {
+        return {
+          items: current.items.map(function (entry) {
+            return entry.id === next.id ? next : entry;
+          })
+        };
+      });
+
+      addLog('操作', container.name + ' 夹在 ' + stand.name + ' 的铁夹上。');
+      return true;
+    },
+
+    releaseClamp: function (id) {
+      var item = findItem(get().items, id);
+      if (!item || !item.clampedTo) return false;
+
+      replaceItem(Object.assign({}, item, { clamp: false, clampedTo: null }));
+      addLog('操作', item.name + ' 离开铁架台。');
       return true;
     },
 
@@ -794,6 +921,11 @@ export var useLabStore = create(function (set, get) {
         return false;
       }
 
+      if (target.stopper && !target.open) {
+        addLog('警告', target.name + ' 的瓶塞没打开，加不进试剂。');
+        return false;
+      }
+
       if (reagent.state === 'solid') {
         var mass = amount || reagent.defaultMass || 1;
         var solid = {
@@ -848,6 +980,12 @@ export var useLabStore = create(function (set, get) {
 
       if (!source || !target || source.kind !== 'container' || target.kind !== 'container') {
         addLog('警告', '只能把液体倒入另一个容器。');
+        return false;
+      }
+
+      /* 塞着瓶塞的试剂瓶倒不出液体：先开塞（画布上点瓶塞，或操作条上的 Status）。 */
+      if (source.stopper && !source.open) {
+        addLog('警告', source.name + ' 的瓶塞没打开，倒不出液体。');
         return false;
       }
 
@@ -931,10 +1069,84 @@ export var useLabStore = create(function (set, get) {
       return true;
     },
 
+    /*
+     * 带倾斜过渡的倾倒：松手后先放完「源容器倾斜 → 水柱落下 → 目标液面跟着涨」
+     * 这段动画，pourFlow 里只记动画进度、不动 contents；动画结束才调 pour()
+     * 结算一次。这样反应日志仍然只出现一次，体积也一次到位，不会边倒边反复
+     * 触发规则引擎。
+     */
+    startPour: function (sourceId, targetId) {
+      if (sourceId === targetId) return false;
+
+      var state = get();
+      var source = findItem(state.items, sourceId);
+      var target = findItem(state.items, targetId);
+
+      if (!source || !target || source.kind !== 'container' || target.kind !== 'container') {
+        addLog('警告', '只能把液体倒入另一个容器。');
+        return false;
+      }
+      if (source.stopper && !source.open) {
+        addLog('警告', source.name + ' 的瓶塞没打开，倒不出液体。');
+        return false;
+      }
+
+      var sourceVolume = totalVolume(source.contents);
+      if (sourceVolume <= 0) {
+        addLog('警告', source.name + ' 中没有可倾倒的液体。');
+        return false;
+      }
+
+      var free = Math.max(0, target.capacity - totalVolume(target.contents));
+      if (free <= 0) {
+        addLog('警告', target.name + ' 已满，无法接收更多液体。');
+        return false;
+      }
+
+      var amount = Math.round(Math.min(free, sourceVolume) * 10) / 10;
+
+      set({
+        pourFlow: {
+          sourceId: sourceId,
+          targetId: targetId,
+          amount: amount,
+          color: source.color,
+          progress: 0,
+          startedAt: Date.now()
+        }
+      });
+      addLog('操作', source.name + ' 倾斜，倒向 ' + target.name + '。');
+      return true;
+    },
+
+    /* 页面每 60ms 调一次：推进倒液进度，走完 100% 再交给 pour() 收尾。 */
+    tickPour: function () {
+      var flow = get().pourFlow;
+      if (!flow) return;
+
+      var progress = Math.min(1, (Date.now() - flow.startedAt) / POUR_DURATION);
+      if (progress < 1) {
+        set({ pourFlow: Object.assign({}, flow, { progress: progress }) });
+        return;
+      }
+
+      set({ pourFlow: null });
+      get().pour(flow.sourceId, flow.targetId);
+    },
+
+    cancelPour: function () {
+      if (get().pourFlow) set({ pourFlow: null });
+    },
+
 
     dumpLiquid: function (id) {
       var item = findItem(get().items, id);
       if (!item || item.kind !== 'container') return;
+
+      if (item.stopper && !item.open) {
+        addLog('警告', item.name + ' 的瓶塞没打开，倒不出来。');
+        return;
+      }
 
       var volume = totalVolume(item.contents);
       if (volume <= 0) {

@@ -98,6 +98,36 @@ var GLASS = {
     edge: 'M60.6 62 Q59.4 80 48.6 89',
     base: 'M28.6 86.2 Q40 92 51.4 86.2',
     mark: 'M28.6 62 Q40 65 51.4 62'
+  },
+  /*
+   * 试剂瓶（细口瓶）：直筒瓶身 + 短颈 + 玻璃瓶塞。
+   * stopper 字段里的几何同时被瓶塞图形与点击热区使用；开塞后瓶塞按 CSS
+   * 抬离瓶口（见 pages.css 的 .lab-stopper--open）。
+   */
+  'reagent-bottle': {
+    body: 'M33 30 V17 H47 V30 H55 Q59 30 59 34 V89 Q59 95.5 52.5 95.5 H27.5 Q21 95.5 21 89 V34 Q21 30 25 30 Z',
+    top: 34,
+    bottom: 94.5,
+    x: 21,
+    width: 38,
+    mouth: { cx: 40, cy: 16, rx: 7, ry: 1.9 },
+    mouthArc: 'M33.4 17.4 Q40 19.6 46.6 17.4',
+    wall: 'M24.4 36 V87.4',
+    edge: 'M58.2 36.4 V87.6 Q58.2 94.2 51.8 94.4',
+    base: 'M25.4 91.4 Q40 95.4 54.6 91.4',
+    highlight: 'M25.6 39 V85.6',
+    highlightSoft: 'M55.4 41 V68',
+    ticks: [
+      [86, 50, 55],
+      [74, 50, 55],
+      [62, 50, 55]
+    ],
+    stopper: {
+      plug: 'M34.7 18 L35.4 9.8 H44.6 L45.3 18 Z',
+      knob: 'M40 1.4 Q44.3 1.4 44.3 5.4 Q44.3 9.4 40 9.4 Q35.7 9.4 35.7 5.4 Q35.7 1.4 40 1.4 Z',
+      spec: 'M37.2 4.6 Q37.2 2.9 38.7 2.5',
+      hit: { x: 31.4, y: 0.4, width: 17.2, height: 19.6 }
+    }
   }
 };
 
@@ -335,6 +365,50 @@ function GlassMarks(props) {
   );
 }
 
+/*
+ * 瓶塞：玻璃塞头 + 塞芯，点击即可开合（onToggleStopper 由页面传入）。
+ * 热区是一块透明 rect，pointerdown 阻止冒泡 —— 否则拨塞子的动作会被 dnd-kit
+ * 当成一次拖拽。开塞后瓶塞抬离瓶口，位置由 pages.css 的 transform 过渡完成。
+ */
+function Stopper(props) {
+  var stopper = props.shape.stopper;
+  var toggle = props.onToggle;
+
+  return (
+    <g
+      className={'lab-stopper' + (props.open ? ' lab-stopper--open' : '')}
+      aria-label={props.open ? '塞上瓶塞' : '打开瓶塞'}
+      role={toggle ? 'button' : undefined}
+      onPointerDown={
+        toggle
+          ? function (event) {
+              event.stopPropagation();
+            }
+          : undefined
+      }
+      onClick={
+        toggle
+          ? function (event) {
+              event.stopPropagation();
+              toggle();
+            }
+          : undefined
+      }
+    >
+      <path className="lab-stopper__plug" d={stopper.plug} />
+      <path className="lab-stopper__knob" d={stopper.knob} />
+      <path className="lab-stopper__spec" d={stopper.spec} />
+      <rect
+        className="lab-stopper__hit"
+        x={stopper.hit.x}
+        y={stopper.hit.y}
+        width={stopper.hit.width}
+        height={stopper.hit.height}
+      />
+    </g>
+  );
+}
+
 export function ContainerGraphic(props) {
   var item = props.item;
   var shape = GLASS[item.type] || GLASS.beaker;
@@ -369,6 +443,13 @@ export function ContainerGraphic(props) {
 
       <GlassMarks shape={shape} />
       <path className="lab-glass" d={shape.body} />
+      {shape.stopper ? (
+        <Stopper
+          shape={shape}
+          open={!!item.open}
+          onToggle={props.onToggleStopper}
+        />
+      ) : null}
     </svg>
   );
 }

@@ -295,7 +295,13 @@ function ToolGraphic(props) {
 
 export function LabGraphic(props) {
   if (props.item.kind === 'container') {
-    return <ContainerGraphic item={props.item} suffix={props.suffix} />;
+    return (
+      <ContainerGraphic
+        item={props.item}
+        suffix={props.suffix}
+        onToggleStopper={props.onToggleStopper}
+      />
+    );
   }
   return <ToolGraphic item={props.item} suffix={props.suffix} />;
 }

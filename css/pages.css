@@ -1343,7 +1343,29 @@
   overflow: visible;
   /* 白底玻璃：浅灰描边 + 白色高光，靠明暗而不是深色线条勾形 */
   color: #c3ced2;
-  transition: color 160ms ease;
+  transition: color 160ms ease, transform 360ms cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+/* ---------- 倒液：源容器倾斜 ---------- */
+
+/*
+ * 倾斜绕瓶底右侧转，瓶口甩向目标容器一侧；回正时同一条过渡负责收尾。
+ * 向左倒时改用镜像的旋转中心，瓶口才会朝向左边。
+ */
+.lab-vessel--pouring .lab-vessel__svg {
+  transform: rotate(38deg);
+  transform-origin: 78% 84%;
+}
+
+.lab-vessel--pour-left .lab-vessel__svg {
+  transform: rotate(-38deg);
+  transform-origin: 22% 84%;
+}
+
+/* 倾斜时标签不再跟着转，容器下方的文字保持可读 */
+.lab-vessel--pouring .lab-vessel__name,
+.lab-vessel--pouring .lab-vessel__sub {
+  color: var(--muted-2);
 }
 
 .lab-vessel:hover .lab-vessel__svg {
@@ -1421,6 +1443,60 @@
   stroke: rgba(17, 24, 39, 0.26);
   stroke-linecap: round;
   stroke-width: 0.9;
+}
+
+/* ---------- 瓶塞：点击开合，开塞后抬离瓶口 ---------- */
+
+.lab-stopper {
+  transform-box: view-box;
+  transform-origin: 40px 18px;
+  transition: transform 320ms cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+/* 塞着：塞芯插在瓶口里 */
+
+.lab-stopper__plug {
+  fill: rgba(255, 255, 255, 0.9);
+  stroke: currentColor;
+  stroke-width: 1.1;
+}
+
+.lab-stopper__knob {
+  fill: rgba(255, 255, 255, 0.82);
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+
+.lab-stopper__spec {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-linecap: round;
+  stroke-width: 1.1;
+}
+
+/* 透明热区：整颗塞子都可点，pointerdown 由页面的 Stopper 拦下 */
+
+.lab-stopper__hit {
+  fill: transparent;
+  cursor: pointer;
+  pointer-events: all;
+}
+
+/* 打开：塞子抬起、歪向一边，浮在瓶口上方 */
+
+.lab-stopper--open {
+  transform: translate(-13px, -20px) rotate(15deg);
+}
+
+.lab-stopper--open .lab-stopper__plug,
+.lab-stopper--open .lab-stopper__knob {
+  fill: rgba(255, 255, 255, 0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-stopper {
+    transition: none;
+  }
 }
 
 /* 瓶口：试管 / 烧瓶是椭圆开口，烧杯是加厚唇边 + 倒液口 */
@@ -1504,6 +1580,30 @@
 .lab-solid {
   opacity: 0.8;
   stroke: none;
+  /* 沉淀刚生成时从不规则的一团沉到底部：只在新固体挂载时播放一次 */
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: lab-solid-settle 620ms cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+@keyframes lab-solid-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.55);
+  }
+  60% {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 0.8;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-solid {
+    animation: none;
+  }
 }
 
 /* 反应放气：液面下升起的气泡 */
@@ -1542,6 +1642,32 @@
   animation-timing-function: ease-out;
 }
 
+/* 沸腾时液面也从缓慢漂移变成明显翻滚：幅度更大、周期更短 */
+.lab-vessel--boiling .lab-liquid__wave {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lab-liquid-churn 1.15s ease-in-out infinite;
+}
+
+@keyframes lab-liquid-churn {
+  0%,
+  100% {
+    transform: translate(-3px, 0.8px) scaleY(1);
+  }
+  35% {
+    transform: translate(2px, -1.6px) scaleY(1.05);
+  }
+  70% {
+    transform: translate(4px, 0.4px) scaleY(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-vessel--boiling .lab-liquid__wave {
+    animation: none;
+  }
+}
+
 /* 放气容器的角标：↑ CO₂ */
 .lab-vessel__gas {
   position: absolute;
@@ -1556,6 +1682,78 @@
   line-height: 1.5;
   pointer-events: none;
   white-space: nowrap;
+}
+
+/* ---------- 倒液水柱 ---------- */
+
+/*
+ * 水柱画在一层不接指针的 SVG 上，坐标直接用画布像素（无 viewBox）。
+ * 虚线 + stroke-dashoffset 动画给出「正往下流」的观感，颜色取源液体。
+ */
+.lab-pour {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lab-pour__stream {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 2.6;
+  stroke-dasharray: 7 5;
+  opacity: 0.9;
+  animation: lab-pour-flow 0.42s linear infinite;
+}
+
+.lab-pour__glint {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.62);
+  stroke-linecap: round;
+  stroke-width: 1;
+  stroke-dasharray: 2 10;
+  animation: lab-pour-flow 0.42s linear infinite;
+}
+
+.lab-pour__drop {
+  opacity: 0.9;
+  animation: lab-pour-drop 0.5s ease-in infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes lab-pour-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+@keyframes lab-pour-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-2px) scale(0.7);
+  }
+  40% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(4px) scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-pour__stream,
+  .lab-pour__glint,
+  .lab-pour__drop {
+    animation: none;
+  }
 }
 
 /* ---------- 酒精灯：玻璃灯体 + 金属灯芯管 + 灯帽 ---------- */
@@ -1908,6 +2106,11 @@
   z-index: 2;
 }
 
+/* 夹在铁架台上的容器：压在铁架台之上，铁圈才不会盖住玻璃 */
+.lab-vessel--clamped {
+  z-index: 3;
+}
+
 .lab-vessel--tool {
   z-index: 1;
 }
@@ -2041,7 +2244,7 @@
 /* 受热方式：直接受热偏暖色提示，垫石棉网时显示「均匀受热」 */
 .lab-actions__heat {
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: 2px;
   padding: 0 0.35rem;
   color: var(--muted);
 }
@@ -2054,6 +2257,38 @@
 
 .lab-actions__heat--uneven {
   border-color: rgba(156, 74, 36, 0.45);
+  color: #9c4a24;
+}
+
+/* Status 读数：带塞容器可点，Open / Closed 直接切换瓶塞 */
+.lab-actions__state {
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 0 0.35rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: default;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.6;
+}
+
+button.lab-actions__state {
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+button.lab-actions__state:hover {
+  color: var(--text);
+}
+
+.lab-actions__state--open {
+  border-color: rgba(79, 139, 200, 0.45);
+  color: #3f6f9b;
+}
+
+.lab-actions__state--closed {
+  border-color: rgba(156, 74, 36, 0.4);
   color: #9c4a24;
 }
 

@@ -10,7 +10,7 @@ import {
   useSensors
 } from '@dnd-kit/core';
 import { LAB_LIBRARY, LAB_ITEM_COUNT, LAB_REAGENTS } from './library';
-import { useLabStore } from './store';
+import { useLabStore, LAB_GEOMETRY, clampPoint } from './store';
 import { LabGraphic } from './Vessel';
 
 var TOKEN_WIDTH = 104;
@@ -72,6 +72,11 @@ function labCollisionDetection(args) {
     if (data && data.item) {
       if (data.item.type === 'wire-gauze' && targetItem.kind === 'container') return [hits[i]];
       if (data.item.kind === 'container' && targetItem.type === 'wire-gauze') return [hits[i]];
+    }
+
+    /* 铁架台也是落点：容器松手在台上就夹进铁圈（见 clampOnStand）。 */
+    if (data && data.item && data.item.kind === 'container' && targetItem.type === 'stand') {
+      return [hits[i]];
     }
 
     if (isMatch && targetItem.type === 'burner') return [hits[i]];
@@ -179,6 +184,33 @@ function benchItemById(id) {
   return null;
 }
 
+/*
+ * 落点离哪个铁架台的铁圈最近：容器玻璃底中心到圈心小于 CLAMP_RADIUS 就算吸住。
+ * 用距离而不是「指针正压在铁架台上」，拖到铁架台旁边也能吸上去，和真实
+ * 摆器材的手感一致。
+ */
+function nearestStand(point) {
+  var items = useLabStore.getState().items;
+  var base = {
+    x: point.x + TOKEN_WIDTH / 2,
+    y: point.y + LAB_GEOMETRY.vesselBaseY
+  };
+  var best = null;
+  var bestDistance = LAB_GEOMETRY.clampRadius;
+
+  items.forEach(function (entry) {
+    if (entry.type !== 'stand') return;
+    var ring = clampPoint(entry);
+    var distance = Math.sqrt(Math.pow(ring.x - base.x, 2) + Math.pow(ring.y - base.y, 2));
+    if (distance <= bestDistance) {
+      best = entry;
+      bestDistance = distance;
+    }
+  });
+
+  return best ? best.id : null;
+}
+
 /* ============================ 左侧：器材库 ============================ */
 
 function LibraryItem(props) {
@@ -261,6 +293,10 @@ function Library(props) {
 
 function BenchItem(props) {
   var item = props.item;
+  var flow = props.pour;
+  var toggleStopper = useLabStore(function (state) {
+    return state.toggleStopper;
+  });
   var drag = useDraggable({
     id: 'bench:' + item.id,
     data: { kind: 'bench-item', id: item.id, item: item }
@@ -268,12 +304,32 @@ function BenchItem(props) {
   var drop = useDroppable({
     id: TARGET_PREFIX + item.id,
     data: { kind: item.kind, id: item.id },
-    disabled: item.kind !== 'container' && item.type !== 'burner' && item.type !== 'wire-gauze'
+    disabled:
+      item.kind !== 'container' &&
+      item.type !== 'burner' &&
+      item.type !== 'wire-gauze' &&
+      item.type !== 'stand'
   });
 
   function setNode(node) {
     drag.setNodeRef(node);
     drop.setNodeRef(node);
+  }
+
+  /*
+   * 倒液进行中：源容器的液面按进度下降、目标容器按进度上涨。这里只改传给
+   * 图形的显示体积（不写回 store），所以一次倾倒只结算一次，动画也能逐帧走。
+   */
+  var pouring = !!flow && flow.sourceId === item.id;
+  var receiving = !!flow && flow.targetId === item.id;
+  var shown = item;
+  if (pouring || receiving) {
+    var delta = (receiving ? 1 : -1) * flow.amount * flow.progress;
+    shown = Object.assign({}, item, {
+      volume: Math.max(0, Math.round((item.volume + delta) * 10) / 10)
+    });
+    /* 空容器接液时先露出源液体的颜色，颜色混合等结算后再接上。 */
+    if (receiving && item.volume === 0) shown.color = flow.color;
   }
 
   var className = 'lab-vessel';
@@ -288,6 +344,11 @@ function BenchItem(props) {
   if (item.type === 'wire-gauze' && item.hot) className += ' lab-vessel--gauze-hot';
   if (item.heating) className += ' lab-vessel--heating';
   if (item.boiling) className += ' lab-vessel--boiling';
+  if (item.clamp) className += ' lab-vessel--clamped';
+  if (pouring && props.pourTarget) {
+    className +=
+      ' lab-vessel--pouring' + (props.pourTarget.x < item.x ? ' lab-vessel--pour-left' : '');
+  }
 
   return (
     <div
@@ -303,13 +364,66 @@ function BenchItem(props) {
         props.onSelect(item.id);
       }}
     >
-      <LabGraphic item={item} />
+      <LabGraphic
+        item={shown}
+        onToggleStopper={
+          item.stopper
+            ? function () {
+                toggleStopper(item.id);
+              }
+            : null
+        }
+      />
       {item.kind === 'container' && item.gas ? (
         <span className="lab-vessel__gas" aria-hidden="true">{'↑ ' + item.gas}</span>
       ) : null}
       <span className="lab-vessel__name">{item.name}</span>
       <span className="lab-vessel__sub">{itemSubText(item)}</span>
     </div>
+  );
+}
+
+/*
+ * 倒液水柱：在两个容器的口沿之间画一条流动的虚线，颜色取源液体。
+ * 纯视觉层 —— 进度、体积都由 store 的 pourFlow 驱动，动画结束后才结算。
+ * 源容器倾斜 38°，瓶口大致落在令牌右侧（向左倒时落在左侧），水柱从那里
+ * 落到目标容器的口沿里。
+ */
+function PourStream(props) {
+  var flow = props.flow;
+  if (!flow) return null;
+
+  var source = null;
+  var target = null;
+  props.items.forEach(function (entry) {
+    if (entry.id === flow.sourceId) source = entry;
+    if (entry.id === flow.targetId) target = entry;
+  });
+  if (!source || !target) return null;
+
+  var toLeft = target.x < source.x;
+  var mouthX = source.x + (toLeft ? -4 : 108);
+  var mouthY = source.y + 22;
+  var dropX = target.x + TOKEN_WIDTH / 2;
+  var dropY = target.y + 34;
+  var bendX = mouthX + (toLeft ? -10 : 10);
+  var bendY = (mouthY + dropY) / 2;
+  var d =
+    'M' + Math.round(mouthX) + ' ' + Math.round(mouthY) +
+    ' Q' + Math.round(bendX) + ' ' + Math.round(bendY) + ' ' + Math.round(dropX) + ' ' + Math.round(dropY);
+
+  return (
+    <svg className="lab-pour" aria-hidden="true" focusable="false">
+      <path className="lab-pour__stream" d={d} style={{ stroke: flow.color }} />
+      <path className="lab-pour__glint" d={d} />
+      <circle
+        className="lab-pour__drop"
+        cx={Math.round(dropX)}
+        cy={Math.round(dropY)}
+        r="1.9"
+        style={{ fill: flow.color }}
+      />
+    </svg>
   );
 }
 
@@ -320,14 +434,19 @@ function Workbench(props) {
   const selectedId = useLabStore(function (state) {
     return state.selectedId;
   });
+  const pourFlow = useLabStore(function (state) {
+    return state.pourFlow;
+  });
   const clearSelection = useLabStore(function (state) {
     return state.clearSelection;
   });
   const canvas = useDroppable({ id: 'bench' });
 
   var selected = null;
+  var pourTarget = null;
   for (var i = 0; i < items.length; i += 1) {
     if (items[i].id === selectedId) selected = items[i];
+    if (pourFlow && items[i].id === pourFlow.targetId) pourTarget = items[i];
   }
 
   function setCanvas(node) {
@@ -360,9 +479,13 @@ function Workbench(props) {
               key={item.id}
               selected={item.id === selectedId}
               onSelect={props.onSelect}
+              pour={pourFlow}
+              pourTarget={pourTarget}
             />
           );
         })}
+
+        <PourStream flow={pourFlow} items={items} />
       </div>
 
       <BenchActions item={selected} />
@@ -403,6 +526,9 @@ function BenchActions(props) {
   var lightItem = useLabStore(function (state) {
     return state.lightItem;
   });
+  var toggleStopper = useLabStore(function (state) {
+    return state.toggleStopper;
+  });
   var items = useLabStore(function (state) {
     return state.items;
   });
@@ -428,8 +554,28 @@ function BenchActions(props) {
       <div className="lab-actions__status">
         <span className="lab-actions__name">{item.name}</span>
         {isContainer ? (
+          item.stopper ? (
+            <button
+              className={
+                'lab-actions__state' +
+                (item.open ? ' lab-actions__state--open' : ' lab-actions__state--closed')
+              }
+              type="button"
+              aria-pressed={!!item.open}
+              title={item.open ? '点击塞上瓶塞' : '点击打开瓶塞'}
+              onClick={function () {
+                toggleStopper(item.id);
+              }}
+            >
+              Status: {item.open ? 'Open' : 'Closed'}
+            </button>
+          ) : (
+            <span className="lab-actions__state">Status: Open</span>
+          )
+        ) : null}
+        {isContainer ? (
           <span className="lab-actions__line">
-            Temp: {item.temperature}°C | PH: {phText} | Vol: {item.volume}mL
+            Temp: {item.temperature}°C | PH: {phText} | Volume: {item.volume}mL
           </span>
         ) : (
           <span className="lab-actions__line">{toolStatus(item, matchBurning)}</span>
@@ -453,7 +599,7 @@ function BenchActions(props) {
           </span>
         ) : null}
         {isContainer ? (
-          <span className="lab-actions__contents">内容: {contentText(item.contents)}</span>
+          <span className="lab-actions__contents">Contents: {contentText(item.contents)}</span>
         ) : null}
         {isContainer && item.phenomenon ? (
           <span className="lab-actions__phenomenon">现象: {item.phenomenon}</span>
@@ -673,8 +819,11 @@ function LabPage() {
   const addReagent = useLabStore(function (state) {
     return state.addReagent;
   });
-  const pour = useLabStore(function (state) {
-    return state.pour;
+  const startPour = useLabStore(function (state) {
+    return state.startPour;
+  });
+  const clampOnStand = useLabStore(function (state) {
+    return state.clampOnStand;
   });
   const lightItem = useLabStore(function (state) {
     return state.lightItem;
@@ -761,14 +910,33 @@ function LabPage() {
           return;
         }
 
+        /* 容器放到铁架台上：夹进铁圈，之后移动铁架台会带着它一起走。 */
+        if (targetItem && targetItem.type === 'stand' && data.item.kind === 'container') {
+          clampOnStand(data.id, target);
+          return;
+        }
+
         if (targetItem && targetItem.kind === 'container' && data.item.kind === 'container') {
-          pour(data.id, target);
+          startPour(data.id, target);
           return;
         }
       }
 
       if (over.id === 'bench' || target) {
         var point = dragPoint(canvasRef.current, event);
+
+        /*
+         * 容器松手在铁圈附近（玻璃底中心距圈心 < 50px）也吸上去。
+         * 判定放在 moveItem 之前：被夹住的容器拖回原位时不会先解夹再夹一次。
+         */
+        if (data.item.kind === 'container') {
+          var standId = nearestStand(point);
+          if (standId) {
+            clampOnStand(data.id, standId);
+            return;
+          }
+        }
+
         moveItem(data.id, point.x, point.y);
       }
     }
@@ -810,6 +978,17 @@ function LabPage() {
     var timer = window.setInterval(function () {
       useLabStore.getState().tickHeating();
     }, 1000);
+
+    return function () {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  /* 倒液动画：每 60ms 推进一步，倾斜角度、水柱与目标液面一起走，1.1s 后结算。 */
+  useEffect(function () {
+    var timer = window.setInterval(function () {
+      useLabStore.getState().tickPour();
+    }, 60);
 
     return function () {
       window.clearInterval(timer);

@@ -14,7 +14,9 @@ export const LAB_LIBRARY = [
       { id: 'test-tube', name: '试管', kind: 'container', capacity: 20 },
       { id: 'erlenmeyer', name: '锥形瓶', kind: 'container', capacity: 250 },
       { id: 'round-flask', name: '圆底烧瓶', kind: 'container', capacity: 250 },
-      { id: 'volumetric-flask', name: '容量瓶', kind: 'container', capacity: 100 }
+      { id: 'volumetric-flask', name: '容量瓶', kind: 'container', capacity: 100 },
+      /* stopper: 带瓶塞的细口瓶，必须先开塞才能倒液或加试剂（store.open 门禁）。 */
+      { id: 'reagent-bottle', name: '试剂瓶', kind: 'container', capacity: 250, stopper: true }
     ]
   },
   {
