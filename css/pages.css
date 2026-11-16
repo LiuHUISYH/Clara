@@ -1774,6 +1774,117 @@
   transform: translateY(0.6px);
 }
 
+/* ---------- 石棉网：金属框 + 交叉网格 + 白色石棉垫 ---------- */
+
+.lab-gauze__shadow {
+  fill: rgba(24, 32, 38, 0.1);
+}
+
+.lab-gauze__frame {
+  stroke: #b9c3c7;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.lab-gauze__mesh {
+  fill: none;
+  stroke: #9aa7ad;
+  stroke-opacity: 0.62;
+  stroke-width: 0.8;
+  transition: stroke 220ms ease, stroke-opacity 220ms ease;
+}
+
+.lab-gauze__pad {
+  fill: #f7f5f0;
+  stroke: #cfd8db;
+  stroke-width: 0.8;
+  transition: fill 220ms ease, stroke 220ms ease;
+}
+
+.lab-gauze__edge {
+  fill: none;
+  stroke: #ffffff;
+  stroke-opacity: 0.85;
+  stroke-width: 1;
+}
+
+.lab-gauze__glow {
+  fill: #f0b064;
+  opacity: 0.26;
+  animation: lab-gauze-breathe 2.6s ease-in-out infinite;
+}
+
+/* 架在火焰上：网格与石棉垫转暖，铁框也带一点烤过的颜色 */
+.lab-gauze--hot .lab-gauze__mesh {
+  stroke: #c98a4e;
+  stroke-opacity: 0.9;
+}
+
+.lab-gauze--hot .lab-gauze__pad {
+  fill: #fbf1e3;
+  stroke: #dcae7f;
+}
+
+.lab-gauze--hot .lab-gauze__frame {
+  stroke: #c9a179;
+}
+
+.lab-vessel--gauze-hot .lab-vessel__sub {
+  color: #9c4a24;
+}
+
+/* 石棉网总夹在火焰与容器之间，说明文字放到右侧，别压住下面的火焰 */
+.lab-vessel--gauze .lab-vessel__name,
+.lab-vessel--gauze .lab-vessel__sub {
+  position: absolute;
+  left: calc(50% + 40px);
+  width: auto;
+  max-width: 140px;
+  margin: 0;
+  text-align: left;
+}
+
+.lab-vessel--gauze .lab-vessel__name {
+  top: 50%;
+}
+
+.lab-vessel--gauze .lab-vessel__sub {
+  top: calc(50% + 15px);
+}
+
+@keyframes lab-gauze-breathe {
+  0%,
+  100% {
+    opacity: 0.18;
+  }
+  50% {
+    opacity: 0.32;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-gauze__glow {
+    animation: none;
+  }
+}
+
+/* 铁架台：底座与固定螺丝用浅灰填充，和玻璃器材的白底体系一致 */
+.lab-stand__base {
+  fill: #e9edee;
+}
+
+.lab-stand__ring {
+  fill: none;
+}
+
+.lab-stand__screw {
+  fill: #d7dee1;
+}
+
+.lab-stand__cap {
+  stroke-width: 2.6;
+}
+
 .lab-vessel--lit .lab-vessel__sub {
   color: #9c4a24;
 }
@@ -1925,6 +2036,25 @@
   min-width: 0;
   color: var(--accent);
   overflow-wrap: anywhere;
+}
+
+/* 受热方式：直接受热偏暖色提示，垫石棉网时显示「均匀受热」 */
+.lab-actions__heat {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+  color: var(--muted);
+}
+
+.lab-actions__heat--even {
+  border-color: rgba(201, 138, 78, 0.5);
+  background: rgba(240, 176, 100, 0.14);
+  color: #8d5327;
+}
+
+.lab-actions__heat--uneven {
+  border-color: rgba(156, 74, 36, 0.45);
+  color: #9c4a24;
 }
 
 .lab-actions__buttons {

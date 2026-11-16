@@ -338,7 +338,8 @@ function GlassMarks(props) {
 export function ContainerGraphic(props) {
   var item = props.item;
   var shape = GLASS[item.type] || GLASS.beaker;
-  var prefix = 'lab-' + item.id;
+  /* 拖拽幽灵会和台上的原件同时存在，用 suffix 让人造 id 不重复 */
+  var prefix = 'lab-' + item.id + (props.suffix || '');
   var clipId = prefix + '-clip';
   var height = liquidHeight(item, shape);
 

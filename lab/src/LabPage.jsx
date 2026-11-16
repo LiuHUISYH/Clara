@@ -63,10 +63,19 @@ function labCollisionDetection(args) {
     }
 
     var targetItem = benchItemById(String(hits[i].id).slice(TARGET_PREFIX.length));
-    if (!targetItem || targetItem.kind !== 'container') {
-      if (isMatch && targetItem && targetItem.type === 'burner') return [hits[i]];
-      continue;
+    if (!targetItem) continue;
+
+    /*
+     * 石棉网与容器互为落点：容器拖到网上就吸上去，石棉网拖到容器上就垫到下面。
+     * 这两种情况都不走“倒液”判定，所以先于容器的距离校验返回。
+     */
+    if (data && data.item) {
+      if (data.item.type === 'wire-gauze' && targetItem.kind === 'container') return [hits[i]];
+      if (data.item.kind === 'container' && targetItem.type === 'wire-gauze') return [hits[i]];
     }
+
+    if (isMatch && targetItem.type === 'burner') return [hits[i]];
+    if (targetItem.kind !== 'container') continue;
 
     if (!fromBench || withinPourRange(point, args.droppableRects.get(hits[i].id))) {
       return [hits[i]];
@@ -76,11 +85,14 @@ function labCollisionDetection(args) {
   return rest;
 }
 
-/* 器材副标题：容器的温度 / 沸腾 / 体积，工具的燃烧状态。 */
+/* 器材副标题：容器的温度 / 沸腾 / 体积，工具的燃烧与受热状态。 */
 function itemSubText(item) {
   if (item.kind !== 'container') {
     if (item.type === 'match') {
       return item.lit ? '燃烧中 · ' + item.matchLeft + 's' : '未点燃';
+    }
+    if (item.type === 'wire-gauze') {
+      return item.hot ? '匀热中' : '未受热';
     }
     return item.type === 'burner' ? (item.lit ? '燃烧中' : '未点燃') : '工具';
   }
@@ -118,6 +130,12 @@ function toolStatus(item, matchBurning) {
   if (item.type === 'burner') {
     if (item.lit) return '状态: 燃烧中 · 把容器架到火焰上即可加热';
     return matchBurning ? '状态: 未点燃 · 用燃着的火柴点燃' : '状态: 未点燃 · 先用火柴划燃';
+  }
+
+  if (item.type === 'wire-gauze') {
+    return item.hot
+      ? '状态: 架在火焰上 · 把容器放上来就能均匀受热'
+      : '状态: 未受热 · 架到火焰与容器之间';
   }
 
   return '工具';
@@ -250,7 +268,7 @@ function BenchItem(props) {
   var drop = useDroppable({
     id: TARGET_PREFIX + item.id,
     data: { kind: item.kind, id: item.id },
-    disabled: item.kind !== 'container' && item.type !== 'burner'
+    disabled: item.kind !== 'container' && item.type !== 'burner' && item.type !== 'wire-gauze'
   });
 
   function setNode(node) {
@@ -266,6 +284,8 @@ function BenchItem(props) {
   else className += ' lab-vessel--tool';
   if (item.kind === 'container' && item.temperature >= 60) className += ' lab-vessel--hot';
   if (item.lit) className += ' lab-vessel--lit';
+  if (item.type === 'wire-gauze') className += ' lab-vessel--gauze';
+  if (item.type === 'wire-gauze' && item.hot) className += ' lab-vessel--gauze-hot';
   if (item.heating) className += ' lab-vessel--heating';
   if (item.boiling) className += ' lab-vessel--boiling';
 
@@ -414,6 +434,24 @@ function BenchActions(props) {
         ) : (
           <span className="lab-actions__line">{toolStatus(item, matchBurning)}</span>
         )}
+        {isContainer ? (
+          <span
+            className={
+              'lab-actions__heat' +
+              (item.evenHeat
+                ? ' lab-actions__heat--even'
+                : item.heating
+                  ? ' lab-actions__heat--uneven'
+                  : '')
+            }
+          >
+            {item.evenHeat
+              ? '受热: 垫石棉网 · 均匀受热'
+              : item.heating
+                ? '受热: 直接受热 · 玻璃受热不均'
+                : '受热: 未受热'}
+          </span>
+        ) : null}
         {isContainer ? (
           <span className="lab-actions__contents">内容: {contentText(item.contents)}</span>
         ) : null}
@@ -592,12 +630,15 @@ function DragPreview(props) {
     var ghostClass = 'lab-drag-ghost';
     if (item.kind === 'container' && item.temperature >= 60) ghostClass += ' lab-vessel--hot';
     if (item.lit) ghostClass += ' lab-vessel--lit';
+    if (item.type === 'wire-gauze') ghostClass += ' lab-vessel--gauze';
+    if (item.type === 'wire-gauze' && item.hot) ghostClass += ' lab-vessel--gauze-hot';
     if (item.heating) ghostClass += ' lab-vessel--heating';
     if (item.boiling) ghostClass += ' lab-vessel--boiling';
 
     return (
       <div className={ghostClass} data-item-id={item.id}>
-        <LabGraphic item={item} />
+        {/* suffix 让幽灵的 SVG id 与台上的原件错开，避免重复 id 影响裁切 */}
+        <LabGraphic item={item} suffix="-ghost" />
         <span className="lab-vessel__name">{item.name}</span>
         <span className="lab-vessel__sub">{itemSubText(item)}</span>
       </div>
@@ -637,6 +678,12 @@ function LabPage() {
   });
   const lightItem = useLabStore(function (state) {
     return state.lightItem;
+  });
+  const standOnGauze = useLabStore(function (state) {
+    return state.standOnGauze;
+  });
+  const stackGauze = useLabStore(function (state) {
+    return state.stackGauze;
   });
   const selectItem = useLabStore(function (state) {
     return state.selectItem;
@@ -696,6 +743,21 @@ function LabPage() {
           lightItem(target);
           var spot = dragPoint(canvasRef.current, event);
           moveItem(data.id, spot.x, spot.y);
+          return;
+        }
+
+        /*
+         * 容器 ↔ 石棉网的两种吸附：
+         *   · 容器放到网上：中心对齐、底部贴住网面，直接形成受热链；
+         *   · 石棉网放到容器上：垫在容器下面；若容器正架在火焰上，连容器一起抬高。
+         */
+        if (targetItem && targetItem.type === 'wire-gauze' && data.item.kind === 'container') {
+          standOnGauze(data.id, target);
+          return;
+        }
+
+        if (data.item.type === 'wire-gauze' && targetItem && targetItem.kind === 'container') {
+          stackGauze(data.id, target);
           return;
         }
 

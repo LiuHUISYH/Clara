@@ -4,7 +4,7 @@
  * 容器（烧杯 / 试管 / 锥形瓶 / 圆底烧瓶 / 容量瓶）是玻璃仪器 + 液体 + 沉淀，
  * 统一由 Glass.jsx 用 SVG 绘制；本文件画酒精灯（玻璃灯体 + 灯帽 + 三层火焰）、
  * 火柴（梗 + 火柴头 + 划燃后的小火苗）与铁架台、玻璃棒、胶头滴管、石棉网、
- * pH 试纸，并提供 LabGraphic 出口。
+ * pH 试纸，并提供 LabGraphic 出口。石棉网在火焰上会转暖色，提示正在匀热。
  * 白底玻璃统一走「浅灰描边 + 白色高光 + 右缘厚度」的做法，不引入深色。
  */
 import React from 'react';
@@ -162,13 +162,23 @@ function MatchGraphic(props) {
   );
 }
 
+/*
+ * 铁架台：底座 + 立杆 + 铁圈 + 固定螺丝。铁圈用来托石棉网，
+ * 所以画成正面看过去的椭圆环，和石棉网的铁框呼应。
+ */
 function StandGraphic() {
   return (
     <g className="lab-tool-drawing">
-      <path d="M18 94 H58" />
-      <path d="M38 94 V20" />
-      <path d="M38 42 H62" />
-      <path d="M62 42 V52" />
+      <path
+        className="lab-stand__base"
+        d="M16 95 H60 Q65 95 65 90.6 Q65 86 60 86 H16 Q11 86 11 90.6 Q11 95 16 95 Z"
+      />
+      <path d="M36 86 V16" />
+      <path className="lab-stand__cap" d="M33.2 16.6 H38.8" />
+      <path d="M40 36 H48" />
+      <ellipse className="lab-stand__ring" cx="53" cy="36" rx="10.5" ry="4.4" />
+      <path d="M40 46 H45" />
+      <circle className="lab-stand__screw" cx="45.6" cy="46" r="1.7" />
     </g>
   );
 }
@@ -193,14 +203,58 @@ function DropperGraphic() {
   );
 }
 
-function GauzeGraphic() {
+/*
+ * 石棉网：金属框 + 交叉网格 + 中间一块白色石棉垫。
+ * 架在燃着的火焰上时加 lab-gauze--hot：网格与垫子转暖色并透出一层光晕，
+ * 一眼能看出「热量正从网面摊开」。
+ */
+function GauzeGraphic(props) {
+  var prefix = props.prefix;
+  var hot = !!props.hot;
+
   return (
-    <g className="lab-tool-drawing">
-      <path d="M16 48 H64 V68 H16 Z" />
-      <path d="M16 58 H64" />
-      <path d="M28 48 V68" />
-      <path d="M40 48 V68" />
-      <path d="M52 48 V68" />
+    <g className={'lab-gauze' + (hot ? ' lab-gauze--hot' : '')}>
+      <defs>
+        <linearGradient id={prefix + '-frame'} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#f0f3f4" />
+          <stop offset="0.55" stopColor="#dfe4e6" />
+          <stop offset="1" stopColor="#c5cfd2" />
+        </linearGradient>
+        <clipPath id={prefix + '-clip'}>
+          <rect x="16" y="48" width="48" height="20" rx="2.4" />
+        </clipPath>
+      </defs>
+
+      <ellipse className="lab-gauze__shadow" cx="40" cy="70.6" rx="25" ry="2.4" />
+
+      {hot ? <ellipse className="lab-gauze__glow" cx="40" cy="58" rx="20" ry="8" /> : null}
+
+      <rect
+        className="lab-gauze__frame"
+        x="15"
+        y="47"
+        width="50"
+        height="22"
+        rx="3"
+        fill={'url(#' + prefix + '-frame)'}
+      />
+
+      <g className="lab-gauze__mesh" clipPath={'url(#' + prefix + '-clip)'}>
+        <path d="M10 46 L44 70" />
+        <path d="M20 45 L54 69" />
+        <path d="M30 45 L64 69" />
+        <path d="M40 45 L74 69" />
+        <path d="M50 45 L84 69" />
+        <path d="M30 45 L16 69" />
+        <path d="M40 45 L26 69" />
+        <path d="M50 45 L36 69" />
+        <path d="M60 45 L46 69" />
+        <path d="M70 45 L56 69" />
+      </g>
+
+      {/* 石棉垫：白色圆片，受热时透出暖色 */}
+      <ellipse className="lab-gauze__pad" cx="40" cy="57.6" rx="11.6" ry="5.6" />
+      <path className="lab-gauze__edge" d="M17.6 48.6 H62.4" />
     </g>
   );
 }
@@ -221,7 +275,8 @@ function PaperGraphic() {
 function ToolGraphic(props) {
   var item = props.item;
   var type = item.type;
-  var prefix = 'lab-' + item.id;
+  /* 拖拽幽灵会和台上的原件同时存在，用 suffix 让人造 id 不重复 */
+  var prefix = 'lab-' + item.id + (props.suffix || '');
 
   return (
     <svg className="lab-vessel__svg" viewBox="0 0 80 104" aria-hidden="true" focusable="false">
@@ -232,7 +287,7 @@ function ToolGraphic(props) {
       {type === 'match' ? <MatchGraphic burning={!!item.lit} /> : null}
       {type === 'rod' ? <RodGraphic /> : null}
       {type === 'dropper' ? <DropperGraphic /> : null}
-      {type === 'wire-gauze' ? <GauzeGraphic /> : null}
+      {type === 'wire-gauze' ? <GauzeGraphic prefix={prefix} hot={!!item.hot} /> : null}
       {type === 'ph-paper' ? <PaperGraphic /> : null}
     </svg>
   );
@@ -240,7 +295,7 @@ function ToolGraphic(props) {
 
 export function LabGraphic(props) {
   if (props.item.kind === 'container') {
-    return <ContainerGraphic item={props.item} />;
+    return <ContainerGraphic item={props.item} suffix={props.suffix} />;
   }
-  return <ToolGraphic item={props.item} />;
+  return <ToolGraphic item={props.item} suffix={props.suffix} />;
 }

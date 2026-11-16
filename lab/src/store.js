@@ -46,6 +46,35 @@ var AMBIENT = 25;
 var BOIL_POINT = 100;
 var DRY_LIMIT = 160;
 
+/* ---------------- 石棉网匀热 ----------------
+ * 玻璃容器直接架在焰尖上受热不均，实验规范是垫一张石棉网：网面把火焰摊开，
+ * 容器坐在网面上，离焰尖反而更远。令牌里网面的位置由 GauzeGraphic 的 viewBox
+ * （16~64 × 48~68，×1.15 缩放 + 2px 内边距）换算而来：
+ *   网面顶 y=57、网面底 y=80，中心 x 与火焰中心同为 52。
+ *
+ * 于是加热变成两段判定：火焰 → 石棉网（gauzeInFlame）、石棉网 → 容器（onGauze）。
+ * 容器坐在石棉网上时底部离焰尖 50px 以上，单纯用 inFlame 判不到，所以由
+ * heatSource() 把「直接受热」和「隔着石棉网受热」两条路径合成一个结论。
+ */
+var GAUZE_TOP_Y = 57;
+var GAUZE_BOTTOM_Y = 80;
+var GAUZE_X_RANGE = 34;
+var GAUZE_GAP = 16;
+var GAUZE_OVERLAP = 8;
+var GAUZE_FLAME_GAP = 14;
+var GAUZE_FLAME_OVERLAP = 12;
+/* 直接受热到这个温度就开始受热不均，记一条建议垫石棉网的警告。 */
+var UNEVEN_TEMPERATURE = 60;
+
+/* 令牌几何对外暴露给页面：吸附石棉网时页面要用同一套数值算落点。 */
+export var LAB_GEOMETRY = {
+  tokenWidth: TOKEN_WIDTH,
+  vesselBaseY: VESSEL_BASE_Y,
+  flameTipY: FLAME_TIP_Y,
+  gauzeTopY: GAUZE_TOP_Y,
+  gauzeBottomY: GAUZE_BOTTOM_Y
+};
+
 /* 一根火柴能燃多久：够从容走到酒精灯旁，又不会一直亮着。 */
 var MATCH_DURATION = 9000;
 
@@ -59,12 +88,55 @@ var LOG_SERIAL = 0;
  *     （正数 = 容器悬在焰尖上方，最多 50px；负数 = 焰尖已探进容器底部，最多 24px）
  * 摆得再近但没架在火焰上（比如并排摆在灯旁边）不算受热。
  */
-function inFlame(item, burner) {
+export function inFlame(item, burner) {
   var dx = item.x + TOKEN_WIDTH / 2 - (burner.x + FLAME_CENTRE_X);
   if (Math.abs(dx) >= FLAME_X_RANGE) return false;
 
   var gap = burner.y + FLAME_TIP_Y - (item.y + VESSEL_BASE_Y);
   return gap <= FLAME_GAP && gap >= -FLAME_OVERLAP;
+}
+
+/* 石棉网是否架在火焰上：网面中心对准焰心，网底落在焰尖附近（可以稍微探进去）。 */
+function gauzeInFlame(gauze, burner) {
+  var dx = gauze.x + TOKEN_WIDTH / 2 - (burner.x + FLAME_CENTRE_X);
+  if (Math.abs(dx) >= GAUZE_X_RANGE) return false;
+
+  var gap = burner.y + FLAME_TIP_Y - (gauze.y + GAUZE_BOTTOM_Y);
+  return gap <= GAUZE_FLAME_GAP && gap >= -GAUZE_FLAME_OVERLAP;
+}
+
+/* 容器是否坐在石棉网上：中心对齐，容器玻璃底落在网面上下 GAUZE_GAP / GAUZE_OVERLAP 内。 */
+function onGauze(item, gauze) {
+  var dx = item.x + TOKEN_WIDTH / 2 - (gauze.x + TOKEN_WIDTH / 2);
+  if (Math.abs(dx) >= GAUZE_X_RANGE) return false;
+
+  var gap = gauze.y + GAUZE_TOP_Y - (item.y + VESSEL_BASE_Y);
+  return gap <= GAUZE_GAP && gap >= -GAUZE_OVERLAP;
+}
+
+/*
+ * 受热来源：先看有没有一张「架在火焰上的石棉网」正好托着容器 —— 石棉网一旦垫进
+ * 去，火焰就先烤网面，容器是被网面匀热，不再算直接受热（否则垫了网还会被判成
+ * 受热不均，网就白垫了）。没有再退回直接受热。
+ * 返回 { burner, gauze }，gauze 为 null 表示直接受热。
+ */
+function heatSource(item, items, burners) {
+  var i;
+  for (i = 0; i < burners.length; i += 1) {
+    for (var j = 0; j < items.length; j += 1) {
+      var gauze = items[j];
+      if (gauze.type !== 'wire-gauze') continue;
+      if (gauzeInFlame(gauze, burners[i]) && onGauze(item, gauze)) {
+        return { burner: burners[i], gauze: gauze };
+      }
+    }
+  }
+
+  for (i = 0; i < burners.length; i += 1) {
+    if (inFlame(item, burners[i])) return { burner: burners[i], gauze: null };
+  }
+
+  return null;
 }
 
 function clock() {
@@ -238,6 +310,9 @@ function createItem(source, point, index) {
     inUse: false,
     heating: false,
     boiling: false,
+    hot: false,
+    evenHeat: false,
+    unevenWarned: false,
     gas: null,
     gasAt: 0,
     phenomenon: null,
@@ -479,6 +554,76 @@ export var useLabStore = create(function (set, get) {
     },
 
     /*
+     * 把容器架到石棉网上：x 对齐、玻璃底贴住网面（留 2px 缝隙）。
+     * 吸附后容器底正好落在 onGauze 的判定窗口里，只要石棉网架在火焰上，
+     * 就能隔着网受热（受热均匀，不会再记「受热不均」的警告）。
+     */
+    standOnGauze: function (containerId, gauzeId) {
+      var items = get().items;
+      var container = findItem(items, containerId);
+      var gauze = findItem(items, gauzeId);
+      if (!container || !gauze) return false;
+
+      get().moveItem(containerId, gauze.x, gauze.y + GAUZE_TOP_Y - VESSEL_BASE_Y - 2);
+      addLog('操作', container.name + ' 架在石棉网上。');
+      return true;
+    },
+
+    /*
+     * 把石棉网垫到容器下面。容器正架在火焰上时连容器一起抬起来：网面落在焰尖
+     * 上方、容器坐在网面上，两件器材在一次 set() 里换位，日志只留一条。
+     */
+    stackGauze: function (gauzeId, containerId) {
+      var state = get();
+      var gauze = findItem(state.items, gauzeId);
+      var container = findItem(state.items, containerId);
+      if (!gauze || !container) return false;
+
+      var burner = null;
+      state.items.forEach(function (entry) {
+        if (burner || entry.type !== 'burner' || !entry.lit) return;
+        if (inFlame(container, entry)) burner = entry;
+      });
+
+      var nextGauze;
+      var nextContainer = null;
+
+      if (burner) {
+        nextGauze = Object.assign({}, gauze, {
+          x: burner.x,
+          y: Math.max(4, burner.y + FLAME_TIP_Y - GAUZE_BOTTOM_Y - 2)
+        });
+        nextContainer = Object.assign({}, container, {
+          x: burner.x,
+          y: Math.max(4, nextGauze.y + GAUZE_TOP_Y - VESSEL_BASE_Y - 2)
+        });
+      } else {
+        nextGauze = Object.assign({}, gauze, {
+          x: container.x,
+          y: Math.max(4, container.y + VESSEL_BASE_Y - GAUZE_TOP_Y - 2)
+        });
+      }
+
+      set(function (current) {
+        return {
+          items: current.items.map(function (entry) {
+            if (entry.id === nextGauze.id) return nextGauze;
+            if (nextContainer && entry.id === nextContainer.id) return nextContainer;
+            return entry;
+          })
+        };
+      });
+
+      addLog(
+        '操作',
+        burner
+          ? '石棉网 垫在 ' + container.name + ' 与火焰之间。'
+          : '石棉网 垫在 ' + container.name + ' 下面。'
+      );
+      return true;
+    },
+
+    /*
      * 加热引擎，由页面每 1s 调用一次。
      * 点燃的酒精灯给邻近容器升温；没有火焰的容器自然降温回室温。
      * 温度没有变化时直接返回，避免无意义的重渲染。
@@ -496,10 +641,19 @@ export var useLabStore = create(function (set, get) {
        */
       var flameInUse = {};
       state.items.forEach(function (item) {
-        if (item.kind !== 'container') return;
-        burners.forEach(function (burner) {
-          if (inFlame(item, burner)) flameInUse[burner.id] = true;
-        });
+        if (item.kind === 'container') {
+          burners.forEach(function (burner) {
+            if (inFlame(item, burner)) flameInUse[burner.id] = true;
+          });
+          return;
+        }
+
+        /* 石棉网架在火焰上也算「火焰上有东西」，外焰同样增亮。 */
+        if (item.type === 'wire-gauze') {
+          burners.forEach(function (burner) {
+            if (gauzeInFlame(item, burner)) flameInUse[burner.id] = true;
+          });
+        }
       });
 
       var logs = [];
@@ -522,12 +676,22 @@ export var useLabStore = create(function (set, get) {
           return Object.assign({}, item, { matchLeft: matchLeft });
         }
 
-        /* 酒精灯：火焰上是否架着容器，决定光晕强弱。 */
+        /* 酒精灯：火焰上是否架着容器 / 石棉网，决定光晕强弱。 */
         if (item.type === 'burner') {
           var inUse = !!item.lit && !!flameInUse[item.id];
           if (inUse === !!item.inUse) return item;
           changed = true;
           return Object.assign({}, item, { inUse: inUse });
+        }
+
+        /* 石棉网：网面是否正被火焰烤着，决定网格是否转暖色。 */
+        if (item.type === 'wire-gauze') {
+          var gauzeHot = burners.some(function (burner) {
+            return gauzeInFlame(item, burner);
+          });
+          if (gauzeHot === !!item.hot) return item;
+          changed = true;
+          return Object.assign({}, item, { hot: gauzeHot });
         }
 
         if (item.kind !== 'container') return item;
@@ -543,24 +707,36 @@ export var useLabStore = create(function (set, get) {
           : item;
         if (expiredGas) changed = true;
 
-        var heated = burners.some(function (burner) {
-          return inFlame(item, burner);
-        });
+        var source = heatSource(base, state.items, burners);
+        var heated = !!source;
+        var even = heated && !!source.gauze;
 
         if (!heated && base.temperature <= AMBIENT) {
-          if (!base.heating) return base;
+          if (!base.heating && !base.unevenWarned) return base;
           changed = true;
-          return Object.assign({}, base, { heating: false });
+          return Object.assign({}, base, {
+            heating: false,
+            evenHeat: false,
+            unevenWarned: false
+          });
         }
 
         var wet = base.contents.some(isLiquid);
         var limit = wet ? BOIL_POINT : DRY_LIMIT;
         var temperature = base.temperature;
         var itemLogs = [];
+        var unevenWarned = !!base.unevenWarned;
 
         if (heated) {
           temperature = Math.min(limit, temperature + HEAT_RATE);
           if (!base.heating) itemLogs.push(['操作', item.name + ' 开始受热。']);
+          if (!even && !unevenWarned && temperature >= UNEVEN_TEMPERATURE) {
+            itemLogs.push([
+              '警告',
+              item.name + ' 直接架在火焰上，玻璃受热不均（建议垫上石棉网）。'
+            ]);
+            unevenWarned = true;
+          }
           if (wet && base.temperature < BOIL_POINT && temperature >= BOIL_POINT) {
             itemLogs.push(['警告', item.name + ' 中的液体沸腾了（' + BOIL_POINT + '°C）。']);
           }
@@ -575,9 +751,16 @@ export var useLabStore = create(function (set, get) {
          * 温度变化后再让引擎结算一次：受热分解靠规则的 minTemperature 触发，
          * 已经到上限（100°C / 160°C）还在受热的容器也能继续分解剩余固体。
          */
-        var draft = Object.assign({}, base, { heating: heated });
+        var draft = Object.assign({}, base, {
+          heating: heated,
+          evenHeat: even,
+          unevenWarned: unevenWarned
+        });
         var settled = settleContents(draft, draft.contents, temperature);
-        var stateChanged = temperature !== base.temperature || heated !== !!base.heating;
+        var stateChanged =
+          temperature !== base.temperature ||
+          heated !== !!base.heating ||
+          even !== !!base.evenHeat;
 
         if (!stateChanged && !settled.reacted) return base;
 
