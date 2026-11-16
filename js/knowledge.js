@@ -157,10 +157,10 @@
     var root = U.$('#view-root');
 
     if (!chapter) {
-      root.innerHTML = '<section class="page"><div class="empty-state">' +
-        '<div class="empty-state__icon">' + U.icon('search') + '</div><h2>没有找到该章节</h2>' +
-        '<p>请检查链接是否正确，或返回章节列表重新选择。</p>' +
-        '<a class="btn btn--primary" href="#/chapters">返回章节列表</a></div></section>';
+      root.innerHTML = '<section class="page">' +
+        '<h1 class="page-title">章节不存在</h1>' +
+        '<p class="empty-note"><a href="#/chapters">返回章节列表</a></p>' +
+        '</section>';
       return;
     }
 
@@ -237,10 +237,10 @@
     var root = U.$('#view-root');
 
     if (!point) {
-      root.innerHTML = '<section class="page"><div class="empty-state">' +
-        '<div class="empty-state__icon">' + U.icon('book') + '</div><h2>没有找到该知识点</h2>' +
-        '<p>它可能已被移除，或链接有误。</p>' +
-        '<a class="btn btn--primary" href="#/chapters">返回章节列表</a></div></section>';
+      root.innerHTML = '<section class="page">' +
+        '<h1 class="page-title">知识点不存在</h1>' +
+        '<p class="empty-note"><a href="#/chapters">返回章节列表</a></p>' +
+        '</section>';
       return;
     }
 

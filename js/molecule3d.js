@@ -320,67 +320,30 @@
 
   /* ============================ 页面模板 ============================ */
 
-  var HOT_MOLECULES = [
-    { label: '水', query: 'H2O' },
-    { label: '甲烷', query: 'CH4' },
-    { label: '二氧化碳', query: 'CO2' },
-    { label: '氨气', query: 'NH3' },
-    { label: '苯', query: 'C6H6' },
-    { label: '食盐', query: 'NaCl' },
-    { label: '乙烯', query: 'C2H4' },
-    { label: '乙醇', query: 'C2H5OH' },
-    { label: '四氟化氙', query: 'XeF4' },
-    { label: '铵根', query: 'NH4+' }
-  ];
-
   /** 渲染 3D 分子页面 */
   function render(params) {
     var root = U.$('#view-root');
 
     root.innerHTML =
       '<section class="page page--molecule">' +
-      '<div class="molecule-top">' +
-      '<div class="molecule-top__text">' +
-      '<h1 class="molecule-title">3D 分子</h1>' +
-      '<p class="molecule-subtitle">输入化学式或名称，拖拽旋转、滚轮缩放。</p>' +
-      '</div>' +
-      '<form class="molecule-search" id="molecule-form" autocomplete="off">' +
-      '<div class="molecule-search__field">' +
-      '<span class="molecule-search__icon" aria-hidden="true">' + U.icon('search') + '</span>' +
-      '<input id="molecule-input" type="text" placeholder="H2O、甲烷、食盐、苯…" aria-label="输入化学式或物质名称">' +
-      '</div>' +
-      '<button class="btn btn--primary" type="submit">生成</button>' +
-      '</form>' +
-      '</div>' +
-
-      '<div class="suggest-row" id="molecule-suggest">' +
-      '<span class="suggest-row__label">热门</span>' +
-      HOT_MOLECULES.map(function (item) {
-        return '<button type="button" class="chip" data-query="' + item.query + '">' +
-          item.label + '</button>';
-      }).join('') +
-      '</div>' +
-
-      '<div class="molecule-layout">' +
-      '<div class="molecule-stage">' +
-      '<div class="canvas-wrap" id="canvas-wrap">' +
+      '<div class="mol-stage" id="canvas-wrap">' +
       '<canvas id="molecule-canvas" aria-label="3D 分子结构图"></canvas>' +
-      '<div class="canvas-badge" id="canvas-badge"></div>' +
+      '<div class="mol-info" id="molecule-info"></div>' +
+      '<form class="mol-search" id="molecule-form" autocomplete="off">' +
+      '<input id="molecule-input" type="text" placeholder="化学式 / 名称" aria-label="输入化学式或物质名称">' +
+      '<button class="sr-only" type="submit">生成</button>' +
+      '</form>' +
       '<div class="atom-tooltip" id="atom-tooltip" hidden></div>' +
-      '<div class="canvas-controls">' +
-      '<button type="button" class="icon-btn" data-action="toggle-rotate" title="自动旋转" aria-label="自动旋转">' + U.icon('rotate') + '</button>' +
-      '<button type="button" class="icon-btn" data-action="toggle-labels" title="显示/隐藏元素符号" aria-label="显示或隐藏元素符号">A</button>' +
+      '<div class="mol-controls">' +
+      '<button type="button" class="icon-btn is-active" data-action="toggle-rotate" title="自动旋转" aria-label="自动旋转" aria-pressed="true">' + U.icon('rotate') + '</button>' +
+      '<button type="button" class="icon-btn is-active" data-action="toggle-labels" title="显示或隐藏元素符号" aria-label="显示或隐藏元素符号" aria-pressed="true">A</button>' +
       '<button type="button" class="icon-btn" data-action="zoom-in" title="放大" aria-label="放大">+</button>' +
       '<button type="button" class="icon-btn" data-action="zoom-out" title="缩小" aria-label="缩小">−</button>' +
       '<button type="button" class="icon-btn" data-action="reset" title="重置视角" aria-label="重置视角">' + U.icon('reset') + '</button>' +
       '<button type="button" class="icon-btn" data-action="download" title="保存图片" aria-label="保存图片">' + U.icon('download') + '</button>' +
       '</div>' +
-      '<div class="canvas-hint">拖拽旋转 · 滚轮缩放 · 双击复位</div>' +
-      '</div>' +
-      '<div class="molecule-notice" id="molecule-notice" hidden></div>' +
-      '<div class="legend" id="molecule-legend" aria-label="元素图例"></div>' +
-      '</div>' +
-      '<aside class="molecule-panel" id="molecule-panel"></aside>' +
+      '<div class="mol-legend" id="molecule-legend" aria-label="元素图例"></div>' +
+      '<p class="mol-error" id="molecule-error" hidden></p>' +
       '</div>' +
       '</section>';
 
@@ -393,7 +356,7 @@
     var initial = (params && params.query) ? decodeURIComponent(params.query) : 'H2O';
     var input = U.$('#molecule-input');
     if (input) input.value = initial;
-    show(initial, true);
+    show(initial);
     startLoop();
     CL.router.setTitle('3D 分子');
   }
@@ -409,27 +372,18 @@
       });
     }
 
-    var suggest = U.$('#molecule-suggest');
-    if (suggest) {
-      U.delegate(suggest, 'click', '[data-query]', function (event, button) {
-        var query = button.getAttribute('data-query');
-        var input = U.$('#molecule-input');
-        if (input) input.value = query;
-        show(query);
-      });
-    }
-
-    var controls = U.$('.canvas-controls');
+    var controls = U.$('.mol-controls');
     if (controls) {
       U.delegate(controls, 'click', '[data-action]', function (event, button) {
         var action = button.getAttribute('data-action');
         if (action === 'toggle-rotate') {
           state.autoRotate = !state.autoRotate;
           button.classList.toggle('is-active', state.autoRotate);
-          U.toast(state.autoRotate ? '已开启自动旋转' : '已暂停自动旋转', 'info', 1400);
+          button.setAttribute('aria-pressed', state.autoRotate ? 'true' : 'false');
         } else if (action === 'toggle-labels') {
           state.showLabels = !state.showLabels;
           button.classList.toggle('is-active', state.showLabels);
+          button.setAttribute('aria-pressed', state.showLabels ? 'true' : 'false');
         } else if (action === 'zoom-in') {
           state.zoom = U.clamp(state.zoom * 1.18, 0.45, 3.6);
         } else if (action === 'zoom-out') {
@@ -505,12 +459,11 @@
   /**
    * 解析输入并切换分子
    * @param {string} query 化学式或名称
-   * @param {boolean} [silent] 是否静默（不弹提示）
    */
-  function show(query, silent) {
+  function show(query) {
     var raw = String(query || '').trim();
     if (!raw) {
-      if (!silent) U.toast('请输入化学式或物质名称', 'warn');
+      showError('请输入化学式或名称');
       return;
     }
 
@@ -523,11 +476,7 @@
     }
 
     if (!molecule) {
-      showNotice('error',
-        '暂时无法识别“' + raw + '”',
-        '请尝试输入常见化学式（如 H2O、CO2、C6H6）或物质名称（如水、甲烷、食盐）。' +
-        '也支持 H2SO4、Ca(OH)2 这类化学式的 VSEPR 推测。');
-      if (!silent) U.toast('无法识别该输入，请查看下方提示', 'error');
+      showError('无法识别“' + raw + '”');
       return;
     }
 
@@ -542,18 +491,12 @@
     computeGeometry();
     resizeCanvas();
     hideTooltip();
-    renderPanel(molecule, state.isEstimate);
+    clearError();
+    renderInfo(molecule, state.isEstimate);
     renderLegend(molecule);
-    renderNotice(molecule, state.isEstimate, raw);
-    updateBadge();
 
     // 立即绘制一帧：避免 requestAnimationFrame 被浏览器延后时出现空白画布
     draw();
-
-    if (!silent) {
-      U.toast(estimate ? '未内置该分子，已用 VSEPR 规则生成示意结构' : '已生成 ' + molecule.formula + ' 的 3D 结构',
-        estimate ? 'warn' : 'success');
-    }
 
     // 同步 URL（replaceState 不触发 hashchange，避免重复渲染）
     try {
@@ -599,44 +542,21 @@
     state.radius = Math.max(radius + maxRadius, 1.2);
   }
 
-  /** 信息面板 */
-  function renderPanel(molecule, estimate) {
-    var panel = U.$('#molecule-panel');
-    if (!panel) return;
+  /** 左上角分子信息：纯等宽文字，不包卡片 */
+  function renderInfo(molecule, estimate) {
+    var info = U.$('#molecule-info');
+    if (!info) return;
 
     var displayName = (molecule.names && molecule.names[0]) || molecule.formula;
-    var properties = [
-      ['化学式', molecule.formula],
-      ['几何构型', molecule.geometry],
-      ['键角', molecule.bondAngle || '—'],
-      ['杂化方式', molecule.hybridization || '—'],
-      ['分子极性', molecule.polarity || '—'],
-      ['分子间作用力', molecule.imf || '—']
-    ];
 
-    panel.innerHTML =
-      '<div class="panel-card">' +
-      '<p class="panel-kicker">' + (estimate ? 'VSEPR 推测结构' : '内置 3D 模型') + '</p>' +
-      '<h2 class="panel-title">' + U.escapeHtml(displayName) +
-      '<span class="panel-title__formula">' + U.escapeHtml(molecule.formula) + '</span></h2>' +
-      '<p class="panel-summary">' + U.escapeHtml(molecule.geometry) + ' · ' +
-      U.escapeHtml(molecule.polarity || '—') + ' · ' +
-      (molecule.atomCount || (molecule.atoms || []).length) + ' 原子 · ' +
-      (molecule.bondCount || (molecule.bonds || []).length) + ' 化学键</p>' +
-      '<dl class="property-list">' +
-      properties.map(function (row) {
-        return '<div class="property-row"><dt>' + row[0] + '</dt><dd>' +
-          U.escapeHtml(row[1]) + '</dd></div>';
-      }).join('') +
-      '</dl>' +
-      '<p class="panel-note">' + U.escapeHtml(molecule.notes || '拖拽可以旋转分子，滚轮可以缩放。') + '</p>' +
-      (estimate ?
-        '<div class="panel-warn">此结构由简化 VSEPR 规则推测，仅用于教学理解，实际键长键角请以实验数据为准。</div>' : '') +
-      '<div class="panel-links">' +
-      '<a class="text-link" href="#/chapters">去学习相关章节 →</a>' +
-      '<a class="text-link" href="#/tools/identify">用工具分析物质 →</a>' +
-      '</div>' +
-      '</div>';
+    info.innerHTML =
+      '<h1 class="mol-info__name">' + U.escapeHtml(molecule.formula) +
+      '<span>' + U.escapeHtml(displayName) + '</span></h1>' +
+      '<p class="mol-info__line">' + U.escapeHtml(molecule.geometry || '—') + ' · ' +
+      U.escapeHtml(molecule.bondAngle || '—') + ' · ' +
+      U.escapeHtml(molecule.hybridization || '—') + '</p>' +
+      '<p class="mol-info__line">' + U.escapeHtml(molecule.polarity || '—') + ' · ' +
+      U.escapeHtml(molecule.imf || '—') + (estimate ? ' · VSEPR 推测' : '') + '</p>';
   }
 
   /** 元素图例 */
@@ -651,42 +571,26 @@
 
     legend.innerHTML = Object.keys(seen).map(function (element) {
       var info = elementInfo(element);
-      return '<span class="legend__item">' +
-        '<i class="legend__dot" style="background:' + info.color + '"></i>' +
-        element + ' · ' + U.escapeHtml(info.name) +
+      return '<span class="mol-legend__item">' +
+        '<i class="mol-legend__dot" style="background:' + info.color + '"></i>' +
+        element + ' ' + U.escapeHtml(info.name) +
         '</span>';
-    }).join('') +
-      '<span class="legend__item legend__item--hint">坐标为教学级近似值</span>';
+    }).join('');
   }
 
-  /** 画布角标 */
-  function updateBadge() {
-    var badge = U.$('#canvas-badge');
-    if (!badge || !state.mol) return;
-    badge.textContent = state.mol.formula + (state.isEstimate ? ' · VSEPR 推测' : ' · 内置模型');
+  /** 画布内错误：一行红字，不使用提示卡 */
+  function showError(text) {
+    var error = U.$('#molecule-error');
+    if (!error) return;
+    error.hidden = false;
+    error.textContent = text;
   }
 
-  /** 显示提示条 */
-  function showNotice(type, title, text) {
-    var notice = U.$('#molecule-notice');
-    if (!notice) return;
-    notice.hidden = false;
-    notice.className = 'molecule-notice molecule-notice--' + type;
-    notice.innerHTML = '<strong>' + U.escapeHtml(title) + '</strong><p>' + U.escapeHtml(text) + '</p>';
-  }
-
-  /** 根据是否推测显示说明 */
-  function renderNotice(molecule, estimate, raw) {
-    if (estimate) {
-      var detail = '推测过程：由化学式解析出中心原子与配体数目，再按价电子对互斥理论估算孤对电子数，' +
-        '得到电子域数 ' + (molecule.domains || '—') + '、孤对电子 ' +
-        (molecule.lonePairs === undefined ? '—' : molecule.lonePairs) +
-        ' 对，因此判断为 ' + molecule.geometry + '。';
-      showNotice('warn', '“' + raw + '”不在内置数据库中，已按 VSEPR 规则推测', detail);
-    } else {
-      showNotice('info', '已加载内置 3D 模型',
-        '该模型的原子坐标按理想几何构型与标准键长生成（教学级精度）。拖拽旋转、滚轮缩放，悬停原子可查看元素信息。');
-    }
+  function clearError() {
+    var error = U.$('#molecule-error');
+    if (!error) return;
+    error.hidden = true;
+    error.textContent = '';
   }
 
   /* ============================ 画布尺寸与视角 ============================ */
@@ -721,7 +625,6 @@
     state.rotX = -0.22;
     state.rotY = 0.55;
     state.zoom = 1;
-    U.toast('视角已重置', 'info', 1200);
   }
 
   /** 保存当前画面为 PNG */
@@ -810,16 +713,9 @@
 
   /* ============================ 绘制 ============================ */
 
-  /** 绘制背景（中心略亮的径向渐变，营造空间感） */
+  /** 绘制背景：纯浅灰，移除径向渐变 */
   function drawBackground(ctx) {
-    var gradient = ctx.createRadialGradient(
-      state.width / 2, state.height / 2, 20,
-      state.width / 2, state.height / 2, Math.max(state.width, state.height) * 0.72
-    );
-    gradient.addColorStop(0, 'rgba(255,255,255,0.95)');
-    gradient.addColorStop(0.55, 'rgba(241,245,249,0.9)');
-    gradient.addColorStop(1, 'rgba(226,232,240,0.75)');
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = '#fbfbfa';
     ctx.fillRect(0, 0, state.width, state.height);
   }
 

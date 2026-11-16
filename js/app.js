@@ -236,15 +236,9 @@
       var root = U.$('#view-root');
       root.innerHTML =
         '<section class="page page--notfound">' +
-        '<div class="empty-state">' +
-        '<div class="empty-state__icon">' + U.icon('compass') + '</div>' +
-        '<h1>页面未找到</h1>' +
-        '<p>路径 <code>#' + U.escapeHtml(parsed.path) + '</code> 不存在，可能已被移动或删除。</p>' +
-        '<div class="empty-state__actions">' +
-        '<a class="btn btn--primary" href="#/home">返回首页</a>' +
-        '<a class="text-link" href="#/chapters">去章节学习 →</a>' +
-        '</div>' +
-        '</div>' +
+        '<h1 class="page-title">页面未找到</h1>' +
+        '<p class="empty-note">' + U.escapeHtml(parsed.path) +
+        ' · <a href="#/home">首页</a></p>' +
         '</section>';
       CL.router.setTitle('页面未找到');
     });
@@ -258,15 +252,11 @@
     if (!root) return;
     root.innerHTML =
       '<section class="page">' +
-      '<div class="empty-state">' +
-      '<div class="empty-state__icon">' + U.icon('alert') + '</div>' +
-      '<h1>数据加载失败</h1>' +
-      '<p>' + U.escapeHtml(error && error.message ? error.message : String(error)) + '</p>' +
-      '<p class="muted">如果你直接双击打开了 index.html，请确认 data/ 目录下的 .js 数据文件存在；' +
-      '也可以在项目根目录运行 <code>python3 -m http.server 8000</code> 后访问 ' +
-      '<code>http://localhost:8000</code>。</p>' +
-      '<button class="btn btn--primary" onclick="location.reload()" type="button">重新加载</button>' +
-      '</div>' +
+      '<h1 class="page-title">数据加载失败</h1>' +
+      '<p class="empty-note text-danger">' +
+      U.escapeHtml(error && error.message ? error.message : String(error)) + '</p>' +
+      '<p class="empty-note">运行 <code>python3 -m http.server 8000</code> 后重试 · ' +
+      '<button class="link-btn" onclick="location.reload()" type="button">重新加载</button></p>' +
       '</section>';
   }
 

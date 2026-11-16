@@ -553,98 +553,23 @@
 
 /* ============================ 3D 分子页 ============================ */
 
-.molecule-top {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 2rem;
-  margin-bottom: 0.7rem;
+.page--molecule {
+  width: calc(100vw - 32px);
+  margin: -2rem calc(50% - 50vw + 16px) 0;
 }
 
-.molecule-top__text {
-  flex: none;
-}
-
-.molecule-title {
-  margin: 0;
-  font-size: 1.4rem;
-}
-
-.molecule-subtitle {
-  max-width: 52ch;
-  margin: 0.2rem 0 0;
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.6;
-}
-
-.molecule-search {
-  display: flex;
-  flex: 1;
-  gap: 0.5rem;
-  max-width: 420px;
-  margin: 0;
-}
-
-.molecule-search__field {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 1;
-  padding: 0.2rem 0;
-  border: 0;
-  border-bottom: 1px solid var(--border-strong);
-  border-radius: 0;
-  background: transparent;
-  transition: border-color var(--transition);
-}
-
-.molecule-search__field:focus-within {
-  border-color: var(--accent);
-}
-
-.molecule-search__icon {
-  display: inline-flex;
-  align-items: center;
-  color: var(--muted);
-}
-
-.molecule-search__icon .icon {
-  width: 16px;
-  height: 16px;
-}
-
-.molecule-search__field input {
-  flex: 1;
-  padding: 0.55em 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-}
-
-.molecule-search__field input:focus {
-  box-shadow: none;
-}
-
-.molecule-search .btn {
-  flex: none;
-}
-
-.molecule-stage {
-  min-width: 0;
-}
-
-.canvas-wrap {
+.mol-stage {
   position: relative;
-  height: clamp(480px, 68vh, 720px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  height: calc(100vh - var(--header-height) - 3.5rem);
+  height: calc(100svh - var(--header-height) - 3.5rem);
+  min-height: 460px;
+  background: #fbfbfa;
   overflow: hidden;
   touch-action: none;
 }
 
 #molecule-canvas {
+  display: block;
   width: 100%;
   height: 100%;
   cursor: grab;
@@ -655,50 +580,151 @@
   cursor: grabbing;
 }
 
-.canvas-badge {
+.mol-info {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 0.2em 0.5em;
-  border: 0;
-  border-radius: 0;
-  background: rgba(255, 255, 255, 0.82);
-  color: var(--muted);
+  top: 1.2rem;
+  left: 1.5rem;
+  z-index: 3;
+  max-width: min(28rem, 48%);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 500;
   pointer-events: none;
 }
 
-.canvas-controls {
+.mol-info__name {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+.mol-info__name span {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
+.mol-info__line {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.mol-search {
   position: absolute;
-  right: 14px;
-  bottom: 14px;
+  top: 1.1rem;
+  right: 1.5rem;
+  z-index: 3;
+  width: min(16rem, 36%);
+}
+
+.mol-search input {
+  width: 100%;
+  padding: 0.35em 0.1em;
+  border: 0;
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  text-align: right;
+  box-shadow: none;
+}
+
+.mol-search input:focus {
+  border-bottom-color: var(--accent);
+  box-shadow: none;
+}
+
+.mol-search input::placeholder {
+  color: var(--muted-2);
+}
+
+.mol-controls {
+  position: absolute;
+  left: 50%;
+  bottom: 0.6rem;
+  z-index: 3;
   display: flex;
-  flex-direction: row;
-  gap: 4px;
+  gap: 0.1rem;
+  transform: translateX(-50%);
 }
 
-.canvas-controls .icon-btn {
-  width: 30px;
-  height: 30px;
-  border-color: var(--border);
-  background: rgba(255, 255, 255, 0.86);
-  font-size: 0.9rem;
-}
-
-.canvas-hint {
-  position: absolute;
-  left: 16px;
-  bottom: 16px;
+.mol-controls .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 0;
-  border-radius: 0;
   background: transparent;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.mol-controls .icon-btn .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.mol-controls .icon-btn:hover {
+  background: transparent;
+  color: var(--text);
+}
+
+.mol-controls .icon-btn.is-active {
+  color: var(--accent);
+}
+
+.mol-legend {
+  position: absolute;
+  left: 1.5rem;
+  bottom: 1.1rem;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.8rem;
+  max-width: 40%;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
   pointer-events: none;
+}
+
+.mol-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.mol-legend__dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.mol-error {
+  position: absolute;
+  left: 50%;
+  bottom: 3.2rem;
+  z-index: 3;
+  max-width: 80%;
+  margin: 0;
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-align: center;
+  pointer-events: none;
+  transform: translateX(-50%);
 }
 
 .atom-tooltip {
@@ -732,122 +758,51 @@
   font-size: 0.68rem;
 }
 
-.molecule-notice {
-  margin-top: 1rem;
-  padding: 0.7rem 0 0.7rem 1rem;
-  border: 0;
-  border-left: 3px solid var(--accent);
-  border-radius: 0;
-  background: transparent;
-  font-size: 0.8rem;
-  line-height: 1.7;
+/* 3D 页面在小屏上让信息与搜索各占一侧，隐藏底部图例避免与按钮重叠 */
+@media (max-width: 720px) {
+  .mol-info {
+    top: 1rem;
+    left: 1rem;
+    max-width: 52%;
+  }
+
+  .mol-search {
+    top: 1rem;
+    right: 1rem;
+    width: 40%;
+  }
+
+  .mol-info__name {
+    font-size: 0.9rem;
+  }
+
+  .mol-info__name span {
+    display: block;
+    margin-left: 0;
+  }
+
+  .mol-legend {
+    display: none;
+  }
+
+  .mol-controls {
+    bottom: 0.5rem;
+  }
+
+  .mol-controls .icon-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .mol-error {
+    bottom: 2.8rem;
+  }
 }
 
-.molecule-notice strong {
-  display: block;
-  margin-bottom: 0.2rem;
-  color: var(--text-2);
-}
-
-.molecule-notice p {
-  margin: 0;
-  color: var(--muted);
-}
-
-.molecule-notice--info {
-  border-left-color: var(--border-strong);
-}
-
-.molecule-notice--warn {
-  border-left-color: var(--warn);
-}
-
-.molecule-notice--error {
-  border-left-color: var(--danger);
-}
-
-.molecule-panel {
-  position: sticky;
-  top: calc(var(--header-height) + 16px);
-  min-width: 0;
-}
-
-.panel-card {
-  padding-left: 1.4rem;
-  border: 0;
-  border-left: 1px solid var(--border);
-  background: transparent;
-}
-
-.panel-kicker {
-  margin: 0 0 0.45rem;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.panel-title {
-  margin: 0 0 0.3rem;
-  font-size: 1.15rem;
-  line-height: 1.35;
-}
-
-.panel-title__formula {
-  display: block;
-  margin-top: 0.15rem;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  font-weight: 500;
-}
-
-.panel-summary {
-  margin: 0 0 0.8rem;
-  color: var(--muted);
-  font-size: 0.76rem;
-  line-height: 1.6;
-}
-
-.panel-note {
-  margin: 0.8rem 0 0;
-  color: var(--text-2);
-  font-size: 0.82rem;
-  line-height: 1.8;
-}
-
-.panel-warn {
-  margin-top: 0.8rem;
-  padding: 0.6rem 0 0.6rem 0.8rem;
-  border-left: 2px solid var(--warn);
-  background: transparent;
-  color: var(--warn);
-  font-size: 0.76rem;
-  line-height: 1.7;
-}
-
-.panel-links {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.panel-links .text-link {
-  font-size: 0.8rem;
-}
-
-/* ============================ 404 ============================ */
-
-.page--notfound .empty-state {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
-}
-
-.page--notfound code {
-  font-size: 0.82rem;
+@media (max-width: 620px) {
+  .page--molecule {
+    margin-top: -1.4rem;
+  }
 }
 
 /* ============================ 页面级响应式 ============================ */
@@ -877,20 +832,6 @@
     grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
-  .molecule-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .molecule-panel {
-    position: static;
-  }
-
-  .panel-card {
-    padding-top: 1.2rem;
-    padding-left: 0;
-    border-top: 1px solid var(--border);
-    border-left: 0;
-  }
 }
 
 @media (max-width: 980px) {
@@ -928,32 +869,6 @@
 
   .hero__actions {
     gap: 1rem;
-  }
-
-  .tool-form {
-    flex-direction: column;
-  }
-
-  .tool-form .btn {
-    width: 100%;
-  }
-
-  .molecule-top {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.8rem;
-  }
-
-  .molecule-search {
-    max-width: none;
-  }
-
-  .canvas-wrap {
-    height: 420px;
-  }
-
-  .canvas-hint {
-    display: none;
   }
 
   .chapter-row {
@@ -1062,14 +977,6 @@
     gap: 0.8rem;
   }
 
-  .wrong-item__time {
-    margin-left: 0;
-  }
-
-  .wrong-footer .muted {
-    margin-left: 0;
-  }
-
   .select-wrap,
   .select-wrap .select {
     width: 100%;
@@ -1108,13 +1015,8 @@
   }
 
   .property-row {
-    flex-direction: column;
-    gap: 0.1rem;
-  }
-
-  .property-row dt {
-    width: auto;
-    font-size: 0.76rem;
+    grid-template-columns: 6.8rem minmax(0, 1fr);
+    gap: 0.7rem;
   }
 
   .toast-root {

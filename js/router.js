@@ -138,12 +138,12 @@
       var outlet = document.getElementById('view-root');
       if (outlet) {
         outlet.innerHTML =
-          '<section class="page"><div class="empty-state">' +
-          '<div class="empty-state__icon">' + CL.utils.icon('alert') + '</div>' +
-          '<h2>页面渲染出错</h2>' +
-          '<p>' + CL.utils.escapeHtml(error.message || String(error)) + '</p>' +
-          '<a class="btn btn--primary" href="#/home">返回首页</a>' +
-          '</div></section>';
+          '<section class="page">' +
+          '<h1 class="page-title">页面渲染出错</h1>' +
+          '<p class="empty-note text-danger">' +
+          CL.utils.escapeHtml(error.message || String(error)) + '</p>' +
+          '<p class="empty-note"><a href="#/home">返回首页</a></p>' +
+          '</section>';
       }
     }
 
