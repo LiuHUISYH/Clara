@@ -17,18 +17,86 @@ var TOKEN_WIDTH = 104;
 var TOKEN_HEIGHT = 128;
 var TARGET_PREFIX = 'target:';
 
-/* 指针落在容器上时优先命中容器，否则落回整张实验台。 */
+/*
+ * 倾倒手势的空间阈值：只有被拖容器的中心落在目标容器中心附近（约令牌的
+ * 半宽、半高）时才认定为“倒进去”。两个令牌外框只是擦边重叠时算自由摆放，
+ * 否则想把两个容器摆得近一点都会被误判成倒液。
+ */
+var POUR_RANGE_X = 56;
+var POUR_RANGE_Y = 64;
+
+function rectCentre(rect) {
+  if (!rect) return null;
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+/* 指针离目标容器中心足够近，才算“把东西倒进这个容器”。 */
+function withinPourRange(point, targetRect) {
+  var centre = rectCentre(targetRect);
+  if (!point || !centre) return false;
+
+  return Math.abs(point.x - centre.x) <= POUR_RANGE_X && Math.abs(point.y - centre.y) <= POUR_RANGE_Y;
+}
+
+/*
+ * 指针落在容器上时优先命中容器，否则落回整张实验台。
+ * 实验台上的容器互拖时还要校验距离：擦边重叠只是摆放，压到中心才倒液。
+ * 从器材库拖出来的试剂 / 器材不受影响，落点只要在容器内就生效。
+ */
 function labCollisionDetection(args) {
   var hits = pointerWithin(args);
   if (hits.length === 0) return [];
 
-  var target = hits.filter(function (hit) {
-    return String(hit.id).indexOf(TARGET_PREFIX) === 0;
-  })[0];
+  var data = args.active.data.current;
+  var fromBench = !!data && data.kind === 'bench-item';
+  var activeRect = args.active.rect.current ? args.active.rect.current.translated : null;
+  var point = args.pointerCoordinates || rectCentre(activeRect);
+  var rest = [];
 
-  return target ? [target] : hits;
+  for (var i = 0; i < hits.length; i += 1) {
+    if (String(hits[i].id).indexOf(TARGET_PREFIX) !== 0) {
+      rest.push(hits[i]);
+      continue;
+    }
+
+    if (!fromBench || withinPourRange(point, args.droppableRects.get(hits[i].id))) {
+      return [hits[i]];
+    }
+  }
+
+  return rest;
 }
 
+/* 器材副标题：容器的温度 / 沸腾 / 体积，工具的燃烧状态。 */
+function itemSubText(item) {
+  if (item.kind !== 'container') {
+    return item.type === 'burner' && item.lit ? '燃烧中' : '工具';
+  }
+
+  var body;
+  if (item.volume > 0) {
+    body = item.volume + ' / ' + item.capacity + ' mL';
+  } else if (item.contents.length > 0) {
+    var solid = item.contents.reduce(function (mass, entry) {
+      return mass + (entry.mass || 0);
+    }, 0);
+    body = '固体 ' + solid + ' g';
+  } else {
+    body = '空 · ' + item.capacity + ' mL';
+  }
+
+  return (
+    (item.temperature !== 25 ? item.temperature + '°C · ' : '') +
+    (item.boiling ? '沸腾 · ' : '') +
+    body
+  );
+}
+
+/*
+ * 落点换算：把拖拽中令牌的实时矩形对回画布坐标。
+ * 直接取左上角（而不是中心）能让器材落在幽灵停下的位置，配合实测宽高做
+ * 边界钳制，避免文字行把器材顶出画布底部。
+ */
 function dragPoint(canvas, event) {
   if (!canvas) return { x: 24, y: 24 };
 
@@ -36,14 +104,14 @@ function dragPoint(canvas, event) {
   var translated = event.active.rect.current && event.active.rect.current.translated;
   if (!translated) return { x: 24, y: 24 };
 
-  var x = translated.left - rect.left + translated.width / 2 - TOKEN_WIDTH / 2;
-  var y = translated.top - rect.top + translated.height / 2 - TOKEN_HEIGHT / 2;
-  var maxX = Math.max(4, rect.width - TOKEN_WIDTH - 4);
-  var maxY = Math.max(4, rect.height - TOKEN_HEIGHT - 4);
+  var width = translated.width || TOKEN_WIDTH;
+  var height = translated.height || TOKEN_HEIGHT;
+  var maxX = Math.max(4, rect.width - width - 4);
+  var maxY = Math.max(4, rect.height - height - 4);
 
   return {
-    x: Math.round(Math.max(4, Math.min(maxX, x))),
-    y: Math.round(Math.max(4, Math.min(maxY, y)))
+    x: Math.round(Math.max(4, Math.min(maxX, translated.left - rect.left))),
+    y: Math.round(Math.max(4, Math.min(maxY, translated.top - rect.top)))
   };
 }
 
@@ -158,25 +226,14 @@ function BenchItem(props) {
   else className += ' lab-vessel--tool';
   if (item.kind === 'container' && item.temperature >= 60) className += ' lab-vessel--hot';
   if (item.heating) className += ' lab-vessel--heating';
-
-  var subText;
-  if (item.kind === 'container') {
-    var body =
-      item.volume > 0
-        ? item.volume + ' / ' + item.capacity + ' mL'
-        : item.contents.length > 0
-          ? '固体 ' + item.contents.reduce(function (mass, entry) { return mass + (entry.mass || 0); }, 0) + ' g'
-          : '空 · ' + item.capacity + ' mL';
-    subText = (item.temperature !== 25 ? item.temperature + '°C · ' : '') + body;
-  } else {
-    subText = item.type === 'burner' && item.lit ? '燃烧中' : '工具';
-  }
+  if (item.boiling) className += ' lab-vessel--boiling';
 
   return (
     <div
       ref={setNode}
       className={className}
       style={{ left: item.x, top: item.y }}
+      data-item-id={item.id}
       {...drag.attributes}
       {...drag.listeners}
       aria-label={'选择' + item.name}
@@ -186,8 +243,11 @@ function BenchItem(props) {
       }}
     >
       <LabGraphic item={item} />
+      {item.kind === 'container' && item.gas ? (
+        <span className="lab-vessel__gas" aria-hidden="true">{'↑ ' + item.gas}</span>
+      ) : null}
       <span className="lab-vessel__name">{item.name}</span>
-      <span className="lab-vessel__sub">{subText}</span>
+      <span className="lab-vessel__sub">{itemSubText(item)}</span>
     </div>
   );
 }
@@ -308,13 +368,16 @@ function BenchActions(props) {
           <span className="lab-actions__line">
             {item.type === 'burner'
               ? item.lit
-                ? '状态: 燃烧中 · 靠近容器即可加热'
+                ? '状态: 燃烧中 · 把容器架到火焰上即可加热'
                 : '状态: 未点燃'
               : '工具'}
           </span>
         )}
         {isContainer ? (
           <span className="lab-actions__contents">内容: {contentText(item.contents)}</span>
+        ) : null}
+        {isContainer && item.phenomenon ? (
+          <span className="lab-actions__phenomenon">现象: {item.phenomenon}</span>
         ) : null}
       </div>
 
@@ -476,13 +539,37 @@ function Console() {
 
 /* ============================ 页面 ============================ */
 
+/*
+ * 拖拽预览：器材库拖出来的是名称胶囊，实验台上的器材则复制一份完整图形，
+ * 让 SVG 跟着指针走（原件留在原位淡成占位），松手后才落到新坐标。
+ */
 function DragPreview(props) {
-  var item = props.data.item;
+  var data = props.data;
+
+  if (data.kind === 'bench-item') {
+    var item = data.item;
+    var ghostClass = 'lab-drag-ghost';
+    if (item.kind === 'container' && item.temperature >= 60) ghostClass += ' lab-vessel--hot';
+    if (item.heating) ghostClass += ' lab-vessel--heating';
+    if (item.boiling) ghostClass += ' lab-vessel--boiling';
+
+    return (
+      <div className={ghostClass} data-item-id={item.id}>
+        <LabGraphic item={item} />
+        <span className="lab-vessel__name">{item.name}</span>
+        <span className="lab-vessel__sub">{itemSubText(item)}</span>
+      </div>
+    );
+  }
+
+  var libraryItem = data.item;
 
   return (
     <div className="lab-drag-preview">
-      <span className="lab-drag-preview__name">{item.name}</span>
-      {item.formula ? <span className="lab-drag-preview__formula">{item.formula}</span> : null}
+      <span className="lab-drag-preview__name">{libraryItem.name}</span>
+      {libraryItem.formula ? (
+        <span className="lab-drag-preview__formula">{libraryItem.formula}</span>
+      ) : null}
     </div>
   );
 }
@@ -550,6 +637,9 @@ function LabPage() {
     }
 
     if (data.kind === 'bench-item') {
+      /* 松手即选中：操作条立刻切到刚移动的器材，方便接着加试剂 / 点燃。 */
+      selectItem(data.id);
+
       if (target && target !== data.id && data.item.kind === 'container') {
         pour(data.id, target);
         return;

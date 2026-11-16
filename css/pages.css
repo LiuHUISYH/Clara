@@ -1316,43 +1316,189 @@
 }
 
 .lab-vessel--dragging {
-  opacity: 0.35;
+  opacity: 0.24;
+}
+
+/* 跟手的拖拽幽灵：渲染在 DragOverlay 里，不会被画布的 overflow 裁掉 */
+.lab-drag-ghost {
+  position: relative;
+  width: 104px;
+  padding: 2px 0 4px;
+  color: var(--text-2);
+  cursor: grabbing;
+  text-align: center;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 14px rgba(17, 24, 39, 0.16));
+}
+
+.lab-drag-ghost .lab-vessel__svg {
+  color: #b7c3c8;
 }
 
 .lab-vessel__svg {
   display: block;
-  width: 72px;
-  height: 94px;
+  width: 92px;
+  height: 120px;
   margin: 0 auto;
   overflow: visible;
+  /* 白底玻璃：浅灰描边 + 白色高光，靠明暗而不是深色线条勾形 */
+  color: #c3ced2;
+  transition: color 160ms ease;
 }
+
+.lab-vessel:hover .lab-vessel__svg {
+  color: #adbbc1;
+}
+
+/* ---------- 玻璃器材：半透明填充、内壁高光、刻度 ---------- */
 
 .lab-glass {
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.6;
+  stroke-width: 1.3;
 }
 
-.lab-glass-detail {
+.lab-glass__fill {
+  stroke: none;
+}
+
+/* 纵向薄雾压在液体上，让玻璃看起来挡在液体前面 */
+.lab-glass__veil {
+  pointer-events: none;
+  stroke: none;
+}
+
+.lab-glass-marks {
   fill: none;
-  opacity: 0.42;
+  pointer-events: none;
+}
+
+.lab-glass__wall {
+  opacity: 0.5;
   stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 0.9;
+}
+
+/* 右侧与底部的内缘暗线：白底玻璃靠它给出厚度 */
+.lab-glass__edge {
+  opacity: 0.9;
+  stroke: rgba(17, 24, 39, 0.13);
   stroke-linecap: round;
   stroke-width: 1;
 }
 
-.lab-liquid {
-  opacity: 0.82;
-  stroke: none;
-}
-
-.lab-liquid-surface {
-  opacity: 0.55;
-  stroke: #5b7480;
+/* 底部椭圆内壁，圆底容器才有体积 */
+.lab-glass__base {
+  stroke: rgba(17, 24, 39, 0.1);
   stroke-linecap: round;
   stroke-width: 1.1;
+}
+
+/* 内壁反光：白线压在半透明玻璃上，器材才有玻璃质感 */
+.lab-glass__specular {
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-linecap: round;
+  stroke-width: 2.2;
+}
+
+.lab-glass__specular--soft {
+  opacity: 0.55;
+  stroke-width: 1.3;
+}
+
+.lab-glass__tick {
+  opacity: 0.5;
+  stroke: rgba(17, 24, 39, 0.24);
+  stroke-linecap: round;
+  stroke-width: 0.9;
+}
+
+.lab-glass__mark {
+  opacity: 0.6;
+  stroke: rgba(17, 24, 39, 0.26);
+  stroke-linecap: round;
+  stroke-width: 0.9;
+}
+
+/* 瓶口：试管 / 烧瓶是椭圆开口，烧杯是加厚唇边 + 倒液口 */
+.lab-glass__mouth {
+  fill: rgba(255, 255, 255, 0.86);
+  stroke: currentColor;
+  stroke-width: 1.1;
+}
+
+/* 瓶口内弧：直口容器（烧杯、试管）的近侧边沿高光 */
+.lab-glass__mouth-arc {
+  opacity: 0.9;
+  stroke: #ffffff;
+  stroke-linecap: round;
+  stroke-width: 1.5;
+}
+
+.lab-glass__rim {
+  opacity: 0.95;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.9;
+}
+
+.lab-glass__lip {
+  opacity: 0.85;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.2;
+}
+
+/* ---------- 液体：波浪液面 + 变色过渡 ---------- */
+
+.lab-liquid {
+  pointer-events: none;
+}
+
+.lab-liquid__fill {
+  fill-opacity: 0.86;
+  transition: fill 480ms ease;
+}
+
+.lab-liquid__shade {
+  pointer-events: none;
+}
+
+.lab-liquid__meniscus {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.62);
+  stroke-linecap: round;
+  stroke-width: 1.3;
+}
+
+.lab-liquid__meniscus-shade {
+  fill: none;
+  stroke: rgba(26, 54, 62, 0.16);
+  stroke-linecap: round;
+  stroke-width: 1.4;
+}
+
+/* 液面起伏：整条波形缓慢横向漂移，液面看上去在轻轻晃动 */
+.lab-liquid__wave {
+  animation: lab-liquid-drift 9s ease-in-out infinite alternate;
+}
+
+@keyframes lab-liquid-drift {
+  from {
+    transform: translate(-8px, 0.5px);
+  }
+  to {
+    transform: translate(8px, -0.5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-liquid__wave {
+    animation: none;
+  }
 }
 
 .lab-solid {
@@ -1360,7 +1506,169 @@
   stroke: none;
 }
 
-/* 酒精灯火焰 */
+/* 反应放气：液面下升起的气泡 */
+.lab-bubble {
+  fill: rgba(255, 255, 255, 0.92);
+  stroke: rgba(92, 132, 152, 0.45);
+  stroke-width: 0.5;
+  opacity: 0;
+  animation: lab-bubble-rise 2.1s ease-in infinite;
+}
+
+@keyframes lab-bubble-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  22% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(var(--lab-rise, -24px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-bubble {
+    animation: none;
+    opacity: 0.65;
+  }
+}
+
+/* 沸腾：气泡更密、上升更快，一眼能和「冒气」区分开 */
+.lab-bubbles--boil .lab-bubble {
+  animation-duration: 1.05s;
+  animation-timing-function: ease-out;
+}
+
+/* 放气容器的角标：↑ CO₂ */
+.lab-vessel__gas {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  padding: 0 3px;
+  border: 1px solid rgba(79, 139, 200, 0.45);
+  background: rgba(252, 252, 250, 0.92);
+  color: #3f6f9b;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  line-height: 1.5;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---------- 酒精灯：玻璃灯体 + 金属灯芯管 + 灯帽 ---------- */
+
+.lab-burner__body {
+  stroke: #c8d2d6;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+.lab-burner__outline {
+  fill: none;
+  stroke: #bcc7cc;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.3;
+}
+
+.lab-burner__alcohol {
+  fill: rgba(205, 218, 224, 0.5);
+  stroke: rgba(158, 176, 183, 0.55);
+  stroke-width: 0.6;
+}
+
+.lab-burner__specular {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.lab-burner__specular--soft {
+  opacity: 0.5;
+  stroke-width: 1.2;
+}
+
+.lab-burner__shadow {
+  fill: rgba(17, 24, 39, 0.06);
+}
+
+.lab-burner__collar {
+  stroke: #b3bfc4;
+  stroke-linejoin: round;
+  stroke-width: 0.9;
+}
+
+.lab-burner__collar-line {
+  fill: none;
+  stroke: rgba(17, 24, 39, 0.16);
+  stroke-linecap: round;
+  stroke-width: 0.7;
+}
+
+.lab-burner__wick {
+  fill: #a39f96;
+  stroke: rgba(17, 24, 39, 0.18);
+  stroke-width: 0.6;
+}
+
+/* 灯帽：未点燃扣在灯芯管上，点燃后平移到灯旁台面 */
+.lab-burner__cap {
+  transition: transform 320ms ease;
+}
+
+.lab-burner__cap--off {
+  transform: translate(27px, 38px);
+}
+
+/* 灯帽落到台面上时才出现的一小片接触阴影 */
+.lab-burner__cap-shadow {
+  fill: rgba(17, 24, 39, 0.07);
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+
+.lab-burner__cap--off .lab-burner__cap-shadow {
+  opacity: 1;
+}
+
+.lab-burner__cap-body {
+  stroke: #b3bfc4;
+  stroke-linejoin: round;
+  stroke-width: 1.1;
+}
+
+.lab-burner__cap-band {
+  fill: none;
+  stroke: rgba(17, 24, 39, 0.14);
+  stroke-width: 0.8;
+}
+
+.lab-burner__cap-highlight {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+
+.lab-burner__cap-knob {
+  fill: none;
+  stroke: #b3bfc4;
+  stroke-linecap: round;
+  stroke-width: 1.1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-burner__cap,
+  .lab-burner__cap-shadow {
+    transition: none;
+  }
+}
+
+/* 酒精灯火焰：外焰（暖橙）/ 中焰（浅黄）/ 焰心（淡蓝）+ 底部光晕 */
 .lab-flame {
   fill: none;
   stroke: none;
@@ -1368,17 +1676,28 @@
 }
 
 .lab-flame__outer {
-  fill: rgba(214, 128, 52, 0.4);
+  fill: rgba(226, 150, 66, 0.42);
   transform-box: fill-box;
   transform-origin: 50% 100%;
   animation: lab-flame-sway 1.7s ease-in-out infinite;
 }
 
-.lab-flame__inner {
-  fill: rgba(238, 190, 96, 0.92);
+.lab-flame__mid {
+  fill: rgba(246, 202, 108, 0.82);
   transform-box: fill-box;
   transform-origin: 50% 100%;
-  animation: lab-flame-sway 1.05s ease-in-out infinite;
+  animation: lab-flame-sway 1.15s ease-in-out infinite;
+}
+
+.lab-flame__core {
+  fill: rgba(158, 208, 232, 0.92);
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: lab-flame-sway 0.85s ease-in-out infinite;
+}
+
+.lab-flame__glow {
+  animation: lab-flame-glow 2.2s ease-in-out infinite;
 }
 
 @keyframes lab-flame-sway {
@@ -1393,20 +1712,48 @@
   }
 }
 
+@keyframes lab-flame-glow {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 火焰上架着容器：外焰更亮、光晕放大，配合容器的「受热」态提示正在加热 */
+.lab-flame--in-use .lab-flame__outer {
+  fill: rgba(232, 143, 50, 0.5);
+}
+
+.lab-flame--in-use .lab-flame__glow {
+  transform: scale(1.28);
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lab-flame__outer,
-  .lab-flame__inner {
+  .lab-flame__mid,
+  .lab-flame__core,
+  .lab-flame__glow {
     animation: none;
   }
 }
 
-/* 被加热到 60°C 以上的容器：玻璃描边转为暖色，副标题标出温度 */
+/* 被加热到 60°C 以上的容器：玻璃描边转为浅暖色，副标题标出温度 */
 .lab-vessel--hot .lab-vessel__svg {
-  color: #96714a;
+  color: #c1a582;
 }
 
 .lab-vessel--hot .lab-vessel__sub {
   color: #a9713d;
+}
+
+/* 沸腾中的容器：副标题里的「沸腾」用更暖的色，和高温区分开 */
+.lab-vessel--boiling .lab-vessel__sub {
+  color: #9c4a24;
 }
 
 /* 容器永远压在工具之上，酒精灯火焰只从容器底部缝隙透出 */
@@ -1436,7 +1783,7 @@
   top: 44%;
   left: calc(50% + 26px);
   width: auto;
-  max-width: 120px;
+  max-width: 168px;
   margin: 0;
   text-align: left;
   transition: none;
@@ -1535,6 +1882,12 @@
 
 .lab-actions__contents {
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lab-actions__phenomenon {
+  min-width: 0;
+  color: var(--accent);
   overflow-wrap: anywhere;
 }
 
@@ -1738,7 +2091,7 @@
       "bench"
       "console";
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto 380px 156px;
+    grid-template-rows: auto 420px 156px;
   }
 
   .lab-library {
@@ -1748,7 +2101,7 @@
   }
 
   .lab-bench {
-    min-height: 380px;
+    min-height: 420px;
   }
 }
 
@@ -1771,7 +2124,7 @@
   }
 
   .lab-shell {
-    grid-template-rows: auto 340px 150px;
+    grid-template-rows: auto 400px 150px;
   }
 
   .lab-library {
@@ -1779,7 +2132,13 @@
   }
 
   .lab-bench {
-    min-height: 340px;
+    min-height: 400px;
+  }
+
+  /* 「100°C · 沸腾 · 10 / 250 mL」约 146px，132px 会被省略号吞掉；放宽到 148px 仍留出画布右缘余量 */
+  .lab-vessel--heating .lab-vessel__name,
+  .lab-vessel--heating .lab-vessel__sub {
+    max-width: 148px;
   }
 
   .lab-bench__actions {

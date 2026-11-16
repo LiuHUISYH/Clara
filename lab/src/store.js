@@ -2,48 +2,44 @@
  * store.js —— 虚拟实验室的 Zustand 全局状态与容器操作
  * ------------------------------------------------------------------
  * 容器统一模型：{ id, type, contents, temperature, color, ph, volume, capacity }
- * 本步骤实现落台、移动、加试剂、倾倒、倒出与清空；加热和反应引擎
- * 在后续步骤接入，所有 contents / temperature 更新都必须经过 syncItem()。
+ * 加试剂、倾倒产生的混合都会先经过 reactions.js 的规则引擎（反应、沉淀、
+ * 放气、放热、指示剂变色），再由 syncItem() 统一重算体积、颜色与 pH。
  */
 
 import { create } from 'zustand';
+import {
+  reactContents,
+  describeReaction,
+  describeGas,
+  hasIndicator,
+  indicatorTint,
+  indicatorText,
+  speciesColor,
+  speciesPh
+} from './reactions';
 
-var LIQUID_COLORS = {
-  HCl: '#e2ecef',
-  H2SO4: '#e2ecef',
-  HNO3: '#e2ecef',
-  NaOH: '#e2ecef',
-  KOH: '#e2ecef',
-  NaCl: '#e2ecef',
-  CuSO4: '#4f8bc8',
-  AgNO3: '#e2ecef',
-  BaCl2: '#e2ecef',
-  Na2CO3: '#e2ecef',
-  phenolphthalein: '#edf2f1',
-  litmus: '#e8eef0'
-};
-
-var LIQUID_PH = {
-  HCl: 1,
-  H2SO4: 0.5,
-  HNO3: 1,
-  NaOH: 13,
-  KOH: 13,
-  NaCl: 7,
-  CuSO4: 4.5,
-  AgNO3: 6,
-  BaCl2: 7,
-  Na2CO3: 11
-};
+/* 气泡的显示时长：tickHeating 到期后清除 gas 标记。 */
+var GAS_DURATION = 6000;
 
 /* ---------------- 加热模型 ----------------
- * 酒精灯点燃后，与「火焰令牌」中心距小于 HEAT_RANGE 的容器每秒升温 HEAT_RATE；
- * 离开火焰的容器每秒降温 COOL_RATE 直到回到室温。有液体时升温止于沸点，
- * 空容器（干烧）止于 DRY_LIMIT。所有温度更新都经过 syncItem()。
+ * 点燃的酒精灯不是「靠近就加热」，而是按火焰位置做碰撞判定：容器必须真的架在
+ * 火焰上方，横向对准、纵向高度合适才算受热（见 inFlame）。
+ *
+ * 令牌坐标（104 宽的器材令牌，SVG 92×120 居中）：
+ *   火焰尖端   x=52（令牌中心）、y=26（viewBox 40,21 → 缩放 1.15 + 2px 内边距）
+ *   容器玻璃底 y=113（viewBox 底边 94~96 → 缩放 1.15 + 2px 内边距，各器型差 ±2px）
+ *
+ * 受热每秒升温 HEAT_RATE：有液体止于沸点并转入沸腾（bubbles 变密、副标题标「沸腾」），
+ * 空容器干烧止于 DRY_LIMIT；离开火焰每秒降温 COOL_RATE 直到回到室温。
+ * 所有温度更新都经过 syncItem()。
  */
 var TOKEN_WIDTH = 104;
-var TOKEN_HEIGHT = 128;
-var HEAT_RANGE = 122;
+var FLAME_CENTRE_X = 52;
+var FLAME_TIP_Y = 26;
+var VESSEL_BASE_Y = 113;
+var FLAME_X_RANGE = 30;
+var FLAME_GAP = 50;
+var FLAME_OVERLAP = 24;
 var HEAT_RATE = 4;
 var COOL_RATE = 2;
 var AMBIENT = 25;
@@ -53,16 +49,19 @@ var DRY_LIMIT = 160;
 var ITEM_SERIAL = 0;
 var LOG_SERIAL = 0;
 
-function itemCentre(item) {
-  return { x: item.x + TOKEN_WIDTH / 2, y: item.y + TOKEN_HEIGHT / 2 };
-}
+/*
+ * 火焰碰撞：容器的玻璃底是否落在酒精灯的火焰上。
+ *   · 横向：容器中心与火焰中心的水平偏差必须小于 FLAME_X_RANGE（30px）
+ *   · 纵向：焰尖到容器底的间距在 -FLAME_OVERLAP ~ FLAME_GAP 之间
+ *     （正数 = 容器悬在焰尖上方，最多 50px；负数 = 焰尖已探进容器底部，最多 24px）
+ * 摆得再近但没架在火焰上（比如并排摆在灯旁边）不算受热。
+ */
+function inFlame(item, burner) {
+  var dx = item.x + TOKEN_WIDTH / 2 - (burner.x + FLAME_CENTRE_X);
+  if (Math.abs(dx) >= FLAME_X_RANGE) return false;
 
-function centreDistance(first, second) {
-  var a = itemCentre(first);
-  var b = itemCentre(second);
-  var dx = a.x - b.x;
-  var dy = a.y - b.y;
-  return Math.sqrt(dx * dx + dy * dy);
+  var gap = burner.y + FLAME_TIP_Y - (item.y + VESSEL_BASE_Y);
+  return gap <= FLAME_GAP && gap >= -FLAME_OVERLAP;
 }
 
 function clock() {
@@ -152,7 +151,7 @@ function mixColor(contents) {
 
   liquids.forEach(function (entry) {
     var weight = entry.volume;
-    var color = hexToRgb(LIQUID_COLORS[entry.chemical] || '#e2ecef');
+    var color = hexToRgb(speciesColor(entry.chemical));
     total += weight;
     rgb[0] += color[0] * weight;
     rgb[1] += color[1] * weight;
@@ -168,7 +167,8 @@ function mixPh(contents) {
   var total = 0;
 
   liquids.forEach(function (entry) {
-    if (typeof LIQUID_PH[entry.chemical] !== 'number') return;
+    var ph = speciesPh(entry.chemical);
+    if (ph === null) return;
     known.push(entry);
     total += entry.volume;
   });
@@ -177,20 +177,35 @@ function mixPh(contents) {
 
   var weighted = 0;
   known.forEach(function (entry) {
-    weighted += LIQUID_PH[entry.chemical] * entry.volume;
+    weighted += speciesPh(entry.chemical) * entry.volume;
   });
 
   return Math.round((weighted / total) * 10) / 10;
 }
 
+/*
+ * 内容 → 容器状态的唯一收口。
+ * 颜色先按液体体积加权混色，再由指示剂显色覆盖（酚酞红 / 石蕊红蓝）。
+ * 沸腾也在这里派生：只有「有液体 + 温度到沸点」才沸腾，倒掉液体或降温后
+ * 自动复位，不需要额外的状态清理。
+ */
+function isBoiling(contents, temperature) {
+  return temperature >= BOIL_POINT - 0.5 && contents.some(isLiquid);
+}
+
 function syncItem(item, contents, temperature) {
+  var ph = mixPh(contents);
+  var tint = indicatorTint(contents, ph);
+  var nextTemperature =
+    typeof temperature === 'number' ? Math.round(temperature * 10) / 10 : item.temperature;
+
   return Object.assign({}, item, {
     contents: contents,
     volume: Math.round(totalVolume(contents) * 10) / 10,
-    color: mixColor(contents),
-    ph: mixPh(contents),
-    temperature:
-      typeof temperature === 'number' ? Math.round(temperature * 10) / 10 : item.temperature
+    color: tint || mixColor(contents),
+    ph: ph,
+    temperature: nextTemperature,
+    boiling: isBoiling(contents, nextTemperature)
   });
 }
 
@@ -215,7 +230,13 @@ function createItem(source, point, index) {
     volume: 0,
     capacity: source.capacity || 0,
     lit: false,
-    heating: false
+    inUse: false,
+    heating: false,
+    boiling: false,
+    gas: null,
+    gasAt: 0,
+    phenomenon: null,
+    phenomenonAt: 0
   };
 }
 
@@ -263,6 +284,56 @@ export var useLabStore = create(function (set, get) {
     });
   }
 
+  /*
+   * 只计算不写状态：把混合后的 contents 交给反应引擎结算，
+   * 返回反应后的容器、是否真的发生了反应，以及需要写入实验日志的条目。
+   */
+  function settleContents(item, contents, temperature) {
+    var beforeTint = indicatorTint(item.contents, item.ph);
+    var result = reactContents(contents, temperature);
+    var next = syncItem(item, result.contents, result.temperature);
+    var logs = [];
+
+    if (result.changed) {
+      var gasEvent = null;
+      result.events.forEach(function (event) {
+        if (event.rule.gas) gasEvent = event;
+      });
+      var last = result.events[result.events.length - 1];
+
+      next = Object.assign({}, next, {
+        gas: gasEvent ? gasEvent.rule.gas.label : null,
+        gasAt: gasEvent ? Date.now() : 0,
+        phenomenon: last.rule.phenomenon,
+        phenomenonAt: Date.now()
+      });
+
+      result.events.forEach(function (event) {
+        logs.push(['反应', describeReaction(event)]);
+      });
+
+      var gasText = describeGas(result.events);
+      if (gasText) logs.push(['反应', gasText]);
+    }
+
+    /* 指示剂刚加入，或颜色随 pH 翻转时补一条现象说明。 */
+    var afterTint = indicatorTint(next.contents, next.ph);
+    var indicatorChanged =
+      afterTint !== beforeTint ||
+      (!hasIndicator(item.contents) && hasIndicator(next.contents));
+    var tintText = indicatorText(next.contents, next.ph);
+    if (indicatorChanged && tintText) logs.push(['反应', tintText]);
+
+    return { item: next, logs: logs, reacted: result.changed };
+  }
+
+  function applySettled(settled) {
+    replaceItem(settled.item);
+    settled.logs.forEach(function (entry) {
+      addLog(entry[0], entry[1]);
+    });
+  }
+
   return {
     items: [],
     selectedId: null,
@@ -298,12 +369,20 @@ export var useLabStore = create(function (set, get) {
       var nextY = Math.round(y);
       if (nextX === item.x && nextY === item.y) return;
 
-      replaceItem(
-        Object.assign({}, item, {
-          x: nextX,
-          y: nextY
-        })
-      );
+      /*
+       * 移动后把器材排到数组末尾：DOM 顺序靠后，同层级时压在其它器材上面，
+       * 符合“拿起来放到别处就该在最前面”的直觉。
+       */
+      set(function (state) {
+        var moved = null;
+        var rest = state.items.filter(function (entry) {
+          if (entry.id !== id) return true;
+          moved = Object.assign({}, entry, { x: nextX, y: nextY });
+          return false;
+        });
+
+        return moved ? { items: rest.concat(moved) } : {};
+      });
       addLog('操作', '移动 ' + item.name + '。');
     },
 
@@ -347,7 +426,7 @@ export var useLabStore = create(function (set, get) {
       }
 
       var lit = !item.lit;
-      replaceItem(Object.assign({}, item, { lit: lit }));
+      replaceItem(Object.assign({}, item, { lit: lit, inUse: lit ? !!item.inUse : false }));
       addLog('操作', (lit ? '点燃 ' : '熄灭 ') + item.name + '。');
       return lit;
     },
@@ -363,42 +442,94 @@ export var useLabStore = create(function (set, get) {
         return item.type === 'burner' && item.lit;
       });
 
+      /*
+       * 先算出「哪些火焰上真的架了容器」，再逐件结算：
+       * 容器在数组里的顺序会随拖拽置顶变化，两遍扫描才能保证酒精灯的 inUse
+       * 和容器的受热结果一致（有容器架着时火焰光晕更亮）。
+       */
+      var flameInUse = {};
+      state.items.forEach(function (item) {
+        if (item.kind !== 'container') return;
+        burners.forEach(function (burner) {
+          if (inFlame(item, burner)) flameInUse[burner.id] = true;
+        });
+      });
+
       var logs = [];
       var changed = false;
 
       var nextItems = state.items.map(function (item) {
-        if (item.kind !== 'container') return item;
-
-        var heated = burners.some(function (burner) {
-          return centreDistance(item, burner) <= HEAT_RANGE;
-        });
-
-        if (!heated && item.temperature <= AMBIENT) {
-          if (!item.heating) return item;
+        /* 酒精灯：火焰上是否架着容器，决定光晕强弱。 */
+        if (item.type === 'burner') {
+          var inUse = !!item.lit && !!flameInUse[item.id];
+          if (inUse === !!item.inUse) return item;
           changed = true;
-          return Object.assign({}, item, { heating: false });
+          return Object.assign({}, item, { inUse: inUse });
         }
 
-        var wet = item.contents.some(isLiquid);
+        if (item.kind !== 'container') return item;
+
+        /*
+         * 气泡只显示 GAS_DURATION 毫秒，到期由加热 tick 顺带清掉；
+         * 放气时同步写入的现象说明也一起收起，避免文字和画面不一致。
+         * 沉淀等其他现象不设时限，因为固体一直留在容器里。
+         */
+        var expiredGas = !!item.gas && Date.now() - item.gasAt > GAS_DURATION;
+        var base = expiredGas
+          ? Object.assign({}, item, { gas: null, gasAt: 0, phenomenon: null, phenomenonAt: 0 })
+          : item;
+        if (expiredGas) changed = true;
+
+        var heated = burners.some(function (burner) {
+          return inFlame(item, burner);
+        });
+
+        if (!heated && base.temperature <= AMBIENT) {
+          if (!base.heating) return base;
+          changed = true;
+          return Object.assign({}, base, { heating: false });
+        }
+
+        var wet = base.contents.some(isLiquid);
         var limit = wet ? BOIL_POINT : DRY_LIMIT;
-        var temperature = item.temperature;
+        var temperature = base.temperature;
+        var itemLogs = [];
 
         if (heated) {
           temperature = Math.min(limit, temperature + HEAT_RATE);
-          if (!item.heating) logs.push(['操作', item.name + ' 开始受热。']);
-          if (wet && item.temperature < BOIL_POINT && temperature >= BOIL_POINT) {
-            logs.push(['警告', item.name + ' 中的液体沸腾了（' + BOIL_POINT + '°C）。']);
+          if (!base.heating) itemLogs.push(['操作', item.name + ' 开始受热。']);
+          if (wet && base.temperature < BOIL_POINT && temperature >= BOIL_POINT) {
+            itemLogs.push(['警告', item.name + ' 中的液体沸腾了（' + BOIL_POINT + '°C）。']);
           }
         } else {
           temperature = Math.max(AMBIENT, temperature - COOL_RATE);
-          if (item.heating) logs.push(['操作', item.name + ' 停止受热，开始降温。']);
+          if (base.heating) itemLogs.push(['操作', item.name + ' 停止受热，开始降温。']);
         }
 
         temperature = Math.round(temperature * 10) / 10;
-        if (temperature === item.temperature && heated === !!item.heating) return item;
+
+        /*
+         * 温度变化后再让引擎结算一次：受热分解靠规则的 minTemperature 触发，
+         * 已经到上限（100°C / 160°C）还在受热的容器也能继续分解剩余固体。
+         */
+        var draft = Object.assign({}, base, { heating: heated });
+        var settled = settleContents(draft, draft.contents, temperature);
+        var stateChanged = temperature !== base.temperature || heated !== !!base.heating;
+
+        if (!stateChanged && !settled.reacted) return base;
 
         changed = true;
-        return syncItem(Object.assign({}, item, { heating: heated }), item.contents, temperature);
+        itemLogs.forEach(function (entry) {
+          logs.push(entry);
+        });
+
+        if (settled.reacted) {
+          settled.logs.forEach(function (entry) {
+            logs.push(entry);
+          });
+        }
+
+        return settled.item;
       });
 
       if (!changed) return;
@@ -425,10 +556,11 @@ export var useLabStore = create(function (set, get) {
           name: reagent.name,
           state: 'solid',
           mass: mass,
-          volume: 0
+          volume: 0,
+          color: speciesColor(reagent.chemical || reagent.name)
         };
         var solidContents = mergeContents(target.contents, [solid]);
-        replaceItem(syncItem(target, solidContents, target.temperature));
+        applySettled(settleContents(target, solidContents, target.temperature));
         addLog('操作', '将 ' + number(mass) + 'g ' + reagentLabel(reagent) + ' 加入' + target.name + '。');
         return true;
       }
@@ -450,7 +582,7 @@ export var useLabStore = create(function (set, get) {
         volume: volume
       };
       var contents = mergeContents(target.contents, [liquid]);
-      replaceItem(syncItem(target, contents, target.temperature));
+      applySettled(settleContents(target, contents, target.temperature));
 
       addLog(
         '操作',
@@ -525,11 +657,12 @@ export var useLabStore = create(function (set, get) {
           : source.temperature;
 
       var sourceNext = syncItem(source, remaining, source.temperature);
-      var targetNext = syncItem(
+      var settled = settleContents(
         target,
         mergeContents(target.contents, moved),
         Math.round(targetTemperature * 10) / 10
       );
+      var targetNext = settled.item;
 
       set(function (current) {
         return {
@@ -546,6 +679,9 @@ export var useLabStore = create(function (set, get) {
         '将 ' + number(movedVolume) + 'mL 液体从' + source.name + '倒入' + target.name + '。' +
           (movedVolume < sourceVolume - 0.05 ? '（' + target.name + ' 容量不足）' : '')
       );
+      settled.logs.forEach(function (entry) {
+        addLog(entry[0], entry[1]);
+      });
       return true;
     },
 
@@ -563,7 +699,9 @@ export var useLabStore = create(function (set, get) {
       var remaining = item.contents.filter(function (entry) {
         return !isLiquid(entry);
       });
-      replaceItem(syncItem(item, remaining, item.temperature));
+      replaceItem(
+        syncItem(Object.assign({}, item, { gas: null, gasAt: 0 }), remaining, item.temperature)
+      );
       addLog('操作', '倒出 ' + number(volume) + 'mL 液体（' + item.name + '）。');
     },
 
@@ -579,7 +717,11 @@ export var useLabStore = create(function (set, get) {
       replaceItem(
         syncItem(
           Object.assign({}, item, {
-            temperature: 25
+            temperature: 25,
+            gas: null,
+            gasAt: 0,
+            phenomenon: null,
+            phenomenonAt: 0
           }),
           [],
           25

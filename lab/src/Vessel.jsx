@@ -1,202 +1,120 @@
+/**
+ * Vessel.jsx —— 虚拟实验室的器材出口：容器交给 Glass.jsx，工具在这里画
+ * ------------------------------------------------------------------
+ * 容器（烧杯 / 试管 / 锥形瓶 / 圆底烧瓶 / 容量瓶）是玻璃仪器 + 液体 + 沉淀，
+ * 统一由 Glass.jsx 用 SVG 绘制；本文件画酒精灯（玻璃灯体 + 灯帽 + 三层火焰）
+ * 与铁架台、玻璃棒、胶头滴管、石棉网、pH 试纸，并提供 LabGraphic 出口。
+ * 白底玻璃统一走「浅灰描边 + 白色高光 + 右缘厚度」的做法，不引入深色。
+ */
 import React from 'react';
+import { ContainerGraphic } from './Glass';
 
-var GLASS = {
-  beaker: {
-    body: 'M14 26 H66 V90 Q66 96 60 96 H20 Q14 96 14 90 Z',
-    top: 28,
-    bottom: 94,
-    x: 14,
-    width: 52
-  },
-  'test-tube': {
-    body: 'M30 14 H50 V82 Q50 94 40 94 Q30 94 30 82 Z',
-    top: 16,
-    bottom: 93,
-    x: 30,
-    width: 20
-  },
-  erlenmeyer: {
-    body: 'M34 14 H46 V34 L62 88 Q64 94 58 94 H22 Q16 94 18 88 L34 34 Z',
-    top: 38,
-    bottom: 93,
-    x: 18,
-    width: 44
-  },
-  'round-flask': {
-    body: 'M34 14 H46 V32 C62 34 68 48 68 62 C68 80 56 94 40 94 C24 94 12 80 12 62 C12 48 18 34 34 32 Z',
-    top: 38,
-    bottom: 93,
-    x: 12,
-    width: 56
-  },
-  'volumetric-flask': {
-    body: 'M34 14 H46 V30 C58 34 64 44 64 58 C64 80 53 94 40 94 C27 94 16 80 16 58 C16 44 22 34 34 30 Z',
-    top: 34,
-    bottom: 93,
-    x: 16,
-    width: 48
-  }
-};
-
-var SOLID_COLORS = {
-  Fe: '#686760',
-  Cu: '#ad6d4f',
-  Zn: '#969c9b',
-  Mg: '#b2b2a8',
-  CaCO3: '#c9c5b7'
-};
-
-function liquidHeight(item, shape) {
-  if (!item.capacity || !item.volume) return 0;
-  var ratio = Math.max(0, Math.min(1, item.volume / item.capacity));
-  if (ratio === 0) return 0;
-  return Math.max(3, (shape.bottom - shape.top) * ratio);
-}
-
-function SolidMarks(props) {
-  var solids = props.contents.filter(function (entry) {
-    return entry.state === 'solid';
-  });
-  if (solids.length === 0) return null;
-
-  var shape = props.shape;
-  var centre = shape.x + shape.width / 2;
+function BurnerDefs(props) {
+  var prefix = props.prefix;
 
   return (
-    <g clipPath={'url(#' + props.clipId + ')'} className="lab-solid-group">
-      {solids.map(function (entry, index) {
-        var mass = entry.mass || 1;
-        var width = Math.max(12, Math.min(shape.width - 4, 12 + mass * 7));
-        var rise = Math.max(4, Math.min(14, 3 + mass * 2));
-        var offset = solids.length > 1 ? (index - (solids.length - 1) / 2) * 6 : 0;
-        var left = centre - width / 2 + offset;
-        var right = left + width;
+    <defs>
+      {/* 灯体玻璃：白底上靠左侧高光与右缘厚度勾勒瓶身 */}
+      <linearGradient id={prefix + '-body'} x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stopColor="#ffffff" stopOpacity="0.62" />
+        <stop offset="0.06" stopColor="#ffffff" stopOpacity="0.9" />
+        <stop offset="0.2" stopColor="#ffffff" stopOpacity="0.26" />
+        <stop offset="0.62" stopColor="#ffffff" stopOpacity="0.04" />
+        <stop offset="0.88" stopColor="#9aa7ad" stopOpacity="0.16" />
+        <stop offset="1" stopColor="#9aa7ad" stopOpacity="0.42" />
+      </linearGradient>
 
-        return (
-          <path
-            className="lab-solid"
-            key={entry.chemical + '-' + index}
-            d={
-              'M' +
-              left +
-              ' ' +
-              shape.bottom +
-              ' Q' +
-              (left + width / 2) +
-              ' ' +
-              (shape.bottom - rise * 2) +
-              ' ' +
-              right +
-              ' ' +
-              shape.bottom +
-              ' Z'
-            }
-            fill={SOLID_COLORS[entry.chemical] || '#8e8b81'}
-          />
-        );
-      })}
-    </g>
+      {/* 灯芯管与灯帽的金属拉丝：上亮下暗 */}
+      <linearGradient id={prefix + '-metal'} x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stopColor="#dfe5e8" />
+        <stop offset="0.18" stopColor="#f6f8f9" />
+        <stop offset="0.52" stopColor="#e6eaec" />
+        <stop offset="1" stopColor="#c6cfd3" />
+      </linearGradient>
+
+      {/* 火焰底部的克制光晕 */}
+      <radialGradient id={prefix + '-glow'} cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stopColor="#f0b064" stopOpacity="0.22" />
+        <stop offset="0.55" stopColor="#f0b064" stopOpacity="0.12" />
+        <stop offset="1" stopColor="#f0b064" stopOpacity="0" />
+      </radialGradient>
+    </defs>
   );
 }
 
-function ContainerGraphic(props) {
-  var item = props.item;
-  var shape = GLASS[item.type] || GLASS.beaker;
-  var clipId = 'lab-clip-' + item.id;
-  var height = liquidHeight(item, shape);
-
-  return (
-    <svg className="lab-vessel__svg" viewBox="0 0 80 104" aria-hidden="true" focusable="false">
-      <defs>
-        <clipPath id={clipId}>
-          <path d={shape.body} />
-        </clipPath>
-      </defs>
-
-      {height > 0 ? (
-        <g clipPath={'url(#' + clipId + ')'}>
-          <rect
-            className="lab-liquid"
-            x={shape.x}
-            y={shape.bottom - height}
-            width={shape.width}
-            height={height}
-            fill={item.color || '#e2ecef'}
-          />
-          <line
-            className="lab-liquid-surface"
-            x1={shape.x - 2}
-            y1={shape.bottom - height}
-            x2={shape.x + shape.width + 2}
-            y2={shape.bottom - height}
-          />
-        </g>
-      ) : null}
-
-      <SolidMarks contents={item.contents} shape={shape} clipId={clipId} />
-      <path className="lab-glass" d={shape.body} />
-
-      {item.type === 'beaker' ? (
-        <g className="lab-glass-detail">
-          <path d="M10 26 H70" />
-          <path d="M22 40 H34" />
-          <path d="M22 52 H34" />
-          <path d="M22 64 H34" />
-        </g>
-      ) : null}
-
-      {item.type === 'test-tube' ? (
-        <g className="lab-glass-detail">
-          <path d="M26 14 H54" />
-          <path d="M30 36 H38" />
-        </g>
-      ) : null}
-
-      {item.type === 'erlenmeyer' ? (
-        <g className="lab-glass-detail">
-          <path d="M30 14 H50" />
-          <path d="M22 78 H30" />
-        </g>
-      ) : null}
-
-      {item.type === 'round-flask' ? (
-        <g className="lab-glass-detail">
-          <path d="M30 14 H50" />
-          <path d="M18 66 H24" />
-        </g>
-      ) : null}
-
-      {item.type === 'volumetric-flask' ? (
-        <g className="lab-glass-detail">
-          <path d="M30 14 H50" />
-          <path d="M64 52 H70" />
-          <path d="M63 60 H69" />
-        </g>
-      ) : null}
-    </svg>
-  );
-}
-
+/*
+ * 酒精灯：玻璃灯体（含酒精液面）+ 金属灯芯管 + 灯芯 + 可移除灯帽。
+ * 未点燃时灯帽扣在灯芯管上；点燃后灯帽平移到灯旁台面（CSS transform 过渡），
+ * 火焰由外焰 / 中焰 / 焰心三层 SVG 路径叠加而成，动画在 pages.css。
+ */
 function BurnerGraphic(props) {
+  var prefix = props.prefix;
+  var lit = !!props.lit;
+
   return (
-    <g className="lab-tool-drawing">
-      <path d="M18 92 H62" />
-      <path d="M27 90 L31 62 H49 L53 90 Z" />
-      <path d="M36 62 H44" />
-      <path d="M40 62 V52" />
-      <path d="M24 96 H56" />
-      {props.lit ? (
-        <g className="lab-flame" aria-hidden="true">
+    <g className="lab-burner">
+      <BurnerDefs prefix={prefix} />
+
+      {/* 台面上的接触阴影 */}
+      <ellipse className="lab-burner__shadow" cx="40" cy="96.6" rx="20.5" ry="2.4" />
+
+      {/* 灯体玻璃 */}
+      <path
+        className="lab-burner__body"
+        d="M21.8 95.6 Q20.4 79.8 29.8 67 Q33 62.6 33 56.4 H47 Q47 62.6 50.2 67 Q59.6 79.8 58.2 95.6 Z"
+        fill={'url(#' + prefix + '-body)'}
+      />
+
+      {/* 灯内酒精：液面带一点起伏，底部略暗 */}
+      <path
+        className="lab-burner__alcohol"
+        d="M23.4 84.4 Q40 87.1 56.6 84.4 L57 93.6 Q40 96.2 23 93.6 Z"
+      />
+
+      {/* 瓶身轮廓与内壁高光 */}
+      <path className="lab-burner__outline" d="M21.8 95.6 Q20.4 79.8 29.8 67 Q33 62.6 33 56.4 H47 Q47 62.6 50.2 67 Q59.6 79.8 58.2 95.6" />
+      <path className="lab-burner__specular" d="M25 89.4 Q24 78 31.4 67.6 Q34 63.4 34 58.4" />
+      <path className="lab-burner__specular lab-burner__specular--soft" d="M55 88 Q55.6 77 49.4 68.4" />
+
+      {/* 灯芯管 */}
+      <path className="lab-burner__collar" d="M31.6 56.6 H48.4 V54.2 H31.6 Z" fill={'url(#' + prefix + '-metal)'} />
+      <path className="lab-burner__collar" d="M34 54.2 H46 V49.4 H34 Z" fill={'url(#' + prefix + '-metal)'} />
+      <path className="lab-burner__collar-line" d="M31.6 55.4 H48.4" />
+      <path className="lab-burner__collar-line" d="M34 50.6 H46" />
+
+      {/* 灯芯：未点燃时露出一小截 */}
+      <path className="lab-burner__wick" d="M37.4 49.4 H42.6 V45.2 H37.4 Z" />
+
+      {lit ? (
+        <g className={'lab-flame' + (props.inUse ? ' lab-flame--in-use' : '')} aria-hidden="true">
+          <ellipse className="lab-flame__glow" cx="40" cy="50" rx="12.4" ry="3.6" fill={'url(#' + prefix + '-glow)'} />
           <path
             className="lab-flame__outer"
-            d="M40 18 C46 32 51 42 49 51 C47 57 42 59 40 59 C38 59 33 57 31 51 C29 42 34 32 40 18 Z"
+            d="M40 21 C43.4 28.4 47.4 35.4 47.4 41.4 C47.4 46 44.6 49.8 42.6 50.8 C41.8 51.2 41 51.6 40 51.6 C39 51.6 38.2 51.2 37.4 50.8 C35.4 49.8 32.6 46 32.6 41.4 C32.6 35.4 36.6 28.4 40 21 Z"
           />
           <path
-            className="lab-flame__inner"
-            d="M40 38 C42 44 44 48 42.5 52 C41.5 55 40.5 56 40 56 C39.5 56 38.5 55 37.5 52 C36 48 38 44 40 38 Z"
+            className="lab-flame__mid"
+            d="M40 29.6 C42.2 35.4 44.4 39.6 44.4 43 C44.4 45.8 42.6 48.2 41.2 49.2 C40.8 49.5 40.4 49.7 40 49.7 C39.6 49.7 39.2 49.5 38.8 49.2 C37.4 48.2 35.6 45.8 35.6 43 C35.6 39.6 37.8 35.4 40 29.6 Z"
+          />
+          <path
+            className="lab-flame__core"
+            d="M40 38.4 C41.6 41.8 42.8 44.4 42.8 46.2 C42.8 47.8 41.6 48.8 40 48.8 C38.4 48.8 37.2 47.8 37.2 46.2 C37.2 44.4 38.4 41.8 40 38.4 Z"
           />
         </g>
       ) : null}
+
+      {/* 灯帽：点燃后移到灯旁台面上 */}
+      <g className={'lab-burner__cap' + (lit ? ' lab-burner__cap--off' : '')} aria-hidden="true">
+        <ellipse className="lab-burner__cap-shadow" cx="40" cy="58.2" rx="9.6" ry="1.7" />
+        <path
+          className="lab-burner__cap-body"
+          d="M32.2 58 H47.8 L47 46.6 Q46.9 45.4 45.6 45.4 H34.4 Q33.1 45.4 33 46.6 Z"
+          fill={'url(#' + prefix + '-metal)'}
+        />
+        <path className="lab-burner__cap-band" d="M32.2 55.6 H47.8" />
+        <path className="lab-burner__cap-highlight" d="M35.4 47.6 V54.4" />
+        <path className="lab-burner__cap-knob" d="M38.9 45.4 V42.4 Q38.9 41.1 40 41.1 Q41.1 41.1 41.1 42.4 V45.4" />
+      </g>
     </g>
   );
 }
@@ -258,12 +176,15 @@ function PaperGraphic() {
 }
 
 function ToolGraphic(props) {
-  var type = props.item.type;
-  var lit = !!props.item.lit;
+  var item = props.item;
+  var type = item.type;
+  var prefix = 'lab-' + item.id;
 
   return (
     <svg className="lab-vessel__svg" viewBox="0 0 80 104" aria-hidden="true" focusable="false">
-      {type === 'burner' ? <BurnerGraphic lit={lit} /> : null}
+      {type === 'burner' ? (
+        <BurnerGraphic lit={!!item.lit} inUse={!!item.inUse} prefix={prefix} />
+      ) : null}
       {type === 'stand' ? <StandGraphic /> : null}
       {type === 'rod' ? <RodGraphic /> : null}
       {type === 'dropper' ? <DropperGraphic /> : null}

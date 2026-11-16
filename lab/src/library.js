@@ -49,7 +49,8 @@ export const LAB_LIBRARY = [
       { id: 'agno3', name: '硝酸银', formula: 'AgNO₃', chemical: 'AgNO3', kind: 'reagent', state: 'liquid', defaultVolume: 10 },
       { id: 'bacl2', name: '氯化钡', formula: 'BaCl₂', chemical: 'BaCl2', kind: 'reagent', state: 'liquid', defaultVolume: 10 },
       { id: 'na2co3', name: '碳酸钠', formula: 'Na₂CO₃', chemical: 'Na2CO3', kind: 'reagent', state: 'liquid', defaultVolume: 10 },
-      { id: 'caco3', name: '碳酸钙', formula: 'CaCO₃', chemical: 'CaCO3', kind: 'reagent', state: 'solid', defaultMass: 1 }
+      { id: 'caco3', name: '碳酸钙', formula: 'CaCO₃', chemical: 'CaCO3', kind: 'reagent', state: 'solid', defaultMass: 1 },
+      { id: 'nahco3', name: '碳酸氢钠', formula: 'NaHCO₃', chemical: 'NaHCO3', kind: 'reagent', state: 'solid', defaultMass: 1 }
     ]
   },
   {

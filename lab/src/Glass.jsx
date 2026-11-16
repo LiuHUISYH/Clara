@@ -1,0 +1,373 @@
+/**
+ * Glass.jsx —— 虚拟实验室的玻璃器材渲染
+ * ------------------------------------------------------------------
+ * 器材全部用 SVG 绘制（viewBox 0 0 80 104）。白底玻璃的做法：
+ *   描边    浅灰（#c3ced2 一类），高温时整体转浅暖棕
+ *   玻璃体  白色高光条 + 右缘略深的厚度渐变 + 纵向薄雾渐变
+ *   内缘    edge（右侧与底部一条 rgba(0,0,0,0.13) 暗线）给出玻璃厚度
+ *   底/口   base 底部椭圆内壁、mouthArc 瓶口内弧，让直口容器也有立体感
+ * 液体用一条正弦波顶边的 path 填充，靠 CSS 横向漂移做出液面起伏；
+ * 颜色变化通过 CSS transition 平滑过渡（0.48s），供变色反应使用。
+ * 几何字段（body / x / width / top / bottom）同时被液体与沉淀复用，
+ * 调整时不要只改轮廓：液体高度按 top..bottom 映射。
+ */
+import React from 'react';
+
+function round(value) {
+  return Math.round(value * 100) / 100;
+}
+
+var GLASS = {
+  beaker: {
+    body: 'M14 26 H66 V90 Q66 96 60 96 H20 Q14 96 14 90 Z',
+    top: 28,
+    bottom: 94,
+    x: 14,
+    width: 52,
+    rim: 'M13.2 25.4 H66.8',
+    mouthArc: 'M14.2 26.6 Q40 29.8 65.8 26.6',
+    wall: 'M16.6 30 V88.4 Q16.9 93.2 20.6 93.6',
+    edge: 'M64.8 28 V90.2 Q64.8 95.3 59.4 95.3',
+    base: 'M20.2 92.2 Q40 96.7 59.8 92.2',
+    highlight: 'M18.8 33 V86.6',
+    highlightSoft: 'M61.2 35 V72',
+    ticks: [
+      [80, 18, 24],
+      [66, 18, 24],
+      [52, 18, 28],
+      [38, 18, 24]
+    ]
+  },
+  'test-tube': {
+    body: 'M30 14 H50 V82 Q50 94 40 94 Q30 94 30 82 Z',
+    top: 16,
+    bottom: 93,
+    x: 30,
+    width: 20,
+    mouth: { cx: 40, cy: 14.2, rx: 10.2, ry: 2.4 },
+    mouthArc: 'M31.2 15.6 Q40 18.4 48.8 15.6',
+    edge: 'M49.1 16.6 V81.8 Q49.1 92.7 40 92.7 Q32.2 92.7 31.6 83.4',
+    base: 'M32.4 87.2 Q40 92.4 47.6 87.2',
+    highlight: 'M32.8 19 V79',
+    highlightSoft: 'M47.2 21 V42',
+    ticks: [
+      [46, 30.4, 35.4],
+      [62, 30.4, 35.4]
+    ]
+  },
+  erlenmeyer: {
+    body: 'M34 14 H46 V34 L62 88 Q64 94 58 94 H22 Q16 94 18 88 L34 34 Z',
+    top: 38,
+    bottom: 93,
+    x: 18,
+    width: 44,
+    mouth: { cx: 40, cy: 14, rx: 6.2, ry: 2 },
+    neckHighlight: 'M36.6 18.6 V29.4',
+    highlight: 'M25.4 84 Q30.2 64 34.4 44',
+    highlightSoft: 'M57.8 86 Q52 68 46.4 46',
+    edge: 'M59.8 84.4 Q62.6 91.6 56.6 93',
+    base: 'M23.4 89.4 Q40 94.4 56.6 89.4',
+    ticks: [
+      [52, 30, 36],
+      [60, 28, 34]
+    ]
+  },
+  'round-flask': {
+    body: 'M34 14 H46 V30 C48.4 30.8 51 32.8 53.4 36 C60.4 45.6 66.4 52.6 66.4 62.6 C66.4 80.4 55 94 40 94 C25 94 13.6 80.4 13.6 62.6 C13.6 52.6 19.6 45.6 26.6 36 C29 32.8 31.6 30.8 34 30 Z',
+    top: 38,
+    bottom: 93,
+    x: 12,
+    width: 56,
+    mouth: { cx: 40, cy: 14, rx: 6.2, ry: 2 },
+    neckHighlight: 'M36.6 18.4 V28.6',
+    highlight: 'M21.4 70 Q21.8 52 28.6 40.4',
+    highlightSoft: 'M59.4 62 Q58.4 48 49.6 40.4',
+    edge: 'M63.8 70 Q62.6 84.4 51.4 91.2',
+    base: 'M27.4 87.6 Q40 93.4 52.6 87.6'
+  },
+  'volumetric-flask': {
+    body: 'M34 14 H46 V30 C58 34 64 44 64 58 C64 80 53 94 40 94 C27 94 16 80 16 58 C16 44 22 34 34 30 Z',
+    top: 34,
+    bottom: 93,
+    x: 16,
+    width: 48,
+    mouth: { cx: 40, cy: 14, rx: 6.2, ry: 2 },
+    neckHighlight: 'M36.6 18.4 V27.6',
+    highlight: 'M23 60 Q25 46 34.6 39.2',
+    highlightSoft: 'M56.6 62 Q54.6 48 46 40.4',
+    edge: 'M60.6 62 Q59.4 80 48.6 89',
+    base: 'M28.6 86.2 Q40 92 51.4 86.2',
+    mark: 'M28.6 62 Q40 65 51.4 62'
+  }
+};
+
+var SOLID_COLORS = {
+  Fe: '#686760',
+  Cu: '#ad6d4f',
+  Zn: '#969c9b',
+  Mg: '#b2b2a8',
+  CaCO3: '#c9c5b7'
+};
+
+function liquidHeight(item, shape) {
+  if (!item.capacity || !item.volume) return 0;
+  var ratio = Math.max(0, Math.min(1, item.volume / item.capacity));
+  if (ratio === 0) return 0;
+  /* 体积→高度用 0.75 次幂：10 mL 在 250 mL 烧杯里也看得见，高低仍随体积单调变化。 */
+  return Math.max(5, (shape.bottom - shape.top) * Math.pow(ratio, 0.75));
+}
+
+/* 一条由 segments 个波峰组成的横波，用于液面顶边。 */
+function wavePath(left, right, y, crest, segments) {
+  var step = (right - left) / segments;
+  var d = 'M' + round(left) + ' ' + round(y);
+
+  for (var i = 0; i < segments; i += 1) {
+    d +=
+      ' q' +
+      round(step / 2) +
+      ' ' +
+      round(-crest * 2) +
+      ' ' +
+      round(step) +
+      ' 0';
+  }
+
+  return d;
+}
+
+/* 每件器材独立一套渐变与裁切，避免同页多件器材 id 冲突。 */
+function GlassDefs(props) {
+  var prefix = props.prefix;
+
+  return (
+    <defs>
+      <clipPath id={prefix + '-clip'}>
+        <path d={props.shape.body} />
+      </clipPath>
+
+      {/* 玻璃本体：左缘一条白色高光 → 中部近乎透明 → 右缘略深的玻璃厚度 */}
+      <linearGradient id={prefix + '-glass'} x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stopColor="#ffffff" stopOpacity="0.58" />
+        <stop offset="0.05" stopColor="#ffffff" stopOpacity="0.95" />
+        <stop offset="0.16" stopColor="#ffffff" stopOpacity="0.3" />
+        <stop offset="0.52" stopColor="#ffffff" stopOpacity="0.06" />
+        <stop offset="0.86" stopColor="currentColor" stopOpacity="0.16" />
+        <stop offset="1" stopColor="currentColor" stopOpacity="0.46" />
+      </linearGradient>
+
+      {/* 纵向薄雾：顶部略亮、底部略沉，白底容器才有体积感 */}
+      <linearGradient id={prefix + '-veil'} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#ffffff" stopOpacity="0.5" />
+        <stop offset="0.14" stopColor="#ffffff" stopOpacity="0.1" />
+        <stop offset="0.58" stopColor="#ffffff" stopOpacity="0" />
+        <stop offset="0.88" stopColor="#111827" stopOpacity="0.03" />
+        <stop offset="1" stopColor="#111827" stopOpacity="0.09" />
+      </linearGradient>
+
+      {/* 液体纵深：液面下方高光、靠近底部略暗，模拟折射 */}
+      <linearGradient id={prefix + '-liquid-shade'} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#ffffff" stopOpacity="0.3" />
+        <stop offset="0.24" stopColor="#ffffff" stopOpacity="0.04" />
+        <stop offset="0.7" stopColor="#0f2b33" stopOpacity="0.02" />
+        <stop offset="1" stopColor="#0f2b33" stopOpacity="0.16" />
+      </linearGradient>
+    </defs>
+  );
+}
+
+/* 液体：波浪顶边 + 玻璃内腔裁切 + 缓慢横向漂移。 */
+function LiquidLayer(props) {
+  var shape = props.shape;
+  var height = props.height;
+  if (height <= 0) return null;
+
+  var surface = shape.bottom - height;
+  var crest = Math.max(0.6, Math.min(1.8, height * 0.14));
+  var left = shape.x - 30;
+  var right = shape.x + shape.width + 30;
+  var wave = wavePath(left, right, surface, crest, 12);
+  var body = wave + ' V' + round(shape.bottom + 8) + ' H' + round(left) + ' Z';
+
+  return (
+    <g clipPath={'url(#' + props.clipId + ')'} className="lab-liquid" aria-hidden="true">
+      <g className="lab-liquid__wave">
+        <path className="lab-liquid__fill" d={body} fill={props.color || '#e2ecef'} />
+        <path className="lab-liquid__shade" d={body} fill={'url(#' + props.prefix + '-liquid-shade)'} />
+        <path className="lab-liquid__meniscus" d={wave} />
+        <path className="lab-liquid__meniscus-shade" d={wave} transform="translate(0 1.2)" />
+      </g>
+    </g>
+  );
+}
+
+/* 沉淀：按质量画成容器底部的弧形堆积，颜色取自物质表。 */
+function SolidMarks(props) {
+  var solids = props.contents.filter(function (entry) {
+    return entry.state === 'solid';
+  });
+  if (solids.length === 0) return null;
+
+  var shape = props.shape;
+  var centre = shape.x + shape.width / 2;
+
+  return (
+    <g clipPath={'url(#' + props.clipId + ')'} className="lab-solid-group" aria-hidden="true">
+      {solids.map(function (entry, index) {
+        var mass = entry.mass || 1;
+        var width = Math.max(12, Math.min(shape.width - 4, 12 + mass * 7));
+        /* 堆积高度随质量增长，但不超过底宽的 42%，避免细试管里出现尖锥 */
+        var rise = Math.max(3, Math.min(width * 0.42, 3 + mass * 1.8));
+        var offset = solids.length > 1 ? (index - (solids.length - 1) / 2) * 6 : 0;
+        var left = centre - width / 2 + offset;
+        var right = left + width;
+
+        return (
+          <path
+            className="lab-solid"
+            key={entry.chemical + '-' + index}
+            d={
+              'M' +
+              left +
+              ' ' +
+              shape.bottom +
+              ' Q' +
+              (left + width / 2) +
+              ' ' +
+              (shape.bottom - rise * 2) +
+              ' ' +
+              right +
+              ' ' +
+              shape.bottom +
+              ' Z'
+            }
+            fill={entry.color || SOLID_COLORS[entry.chemical] || '#8e8b81'}
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+/*
+ * 放气 / 沸腾现象：液面下升起一组气泡，CSS 负责漂浮动画。
+ * 沸腾时气泡更多、更密、动画更快（lab-bubbles--boil），一眼能分出「在冒气」
+ * 和「水开了」。
+ */
+function Bubbles(props) {
+  var shape = props.shape;
+  var height = props.height;
+  var boiling = !!props.boiling;
+  var count = boiling ? 8 : 5;
+  var rise = Math.max(6, Math.min(28, height - 6));
+  var bubbles = [];
+
+  for (var index = 0; index < count; index += 1) {
+    var cx = shape.x + shape.width * (0.14 + (index % 4) * 0.24);
+    var radius = boiling ? 1.6 + (index % 3) * 0.5 : 1.5 + (index % 3) * 0.5;
+
+    bubbles.push(
+      <circle
+        className="lab-bubble"
+        key={index}
+        cx={cx}
+        cy={shape.bottom - 3}
+        r={radius}
+        style={{
+          animationDelay: (boiling ? index * 0.15 : index * 0.4).toFixed(2) + 's',
+          '--lab-rise': '-' + rise + 'px'
+        }}
+      />
+    );
+  }
+
+  return (
+    <g
+      clipPath={'url(#' + props.clipId + ')'}
+      className={'lab-bubbles' + (boiling ? ' lab-bubbles--boil' : '')}
+      aria-hidden="true"
+    >
+      {bubbles}
+    </g>
+  );
+}
+
+/* 玻璃细节：内缘厚度、内壁、高光、刻度、瓶口。画在液体之上，像玻璃挡在液体前面。 */
+function GlassMarks(props) {
+  var shape = props.shape;
+  var ticks = shape.ticks || [];
+
+  return (
+    <g className="lab-glass-marks" aria-hidden="true">
+      {shape.wall ? <path className="lab-glass__wall" d={shape.wall} /> : null}
+      {shape.edge ? <path className="lab-glass__edge" d={shape.edge} /> : null}
+      {shape.base ? <path className="lab-glass__base" d={shape.base} /> : null}
+      {shape.highlight ? <path className="lab-glass__specular" d={shape.highlight} /> : null}
+      {shape.highlightSoft ? (
+        <path className="lab-glass__specular lab-glass__specular--soft" d={shape.highlightSoft} />
+      ) : null}
+      {shape.neckHighlight ? (
+        <path className="lab-glass__specular lab-glass__specular--soft" d={shape.neckHighlight} />
+      ) : null}
+      {ticks.map(function (tick, index) {
+        return (
+          <path
+            className="lab-glass__tick"
+            key={'tick-' + index}
+            d={'M' + tick[1] + ' ' + tick[0] + ' H' + tick[2]}
+          />
+        );
+      })}
+      {shape.mark ? <path className="lab-glass__mark" d={shape.mark} /> : null}
+      {shape.mouth ? (
+        <ellipse
+          className="lab-glass__mouth"
+          cx={shape.mouth.cx}
+          cy={shape.mouth.cy}
+          rx={shape.mouth.rx}
+          ry={shape.mouth.ry}
+        />
+      ) : null}
+      {shape.mouthArc ? <path className="lab-glass__mouth-arc" d={shape.mouthArc} /> : null}
+      {shape.rim ? <path className="lab-glass__rim" d={shape.rim} /> : null}
+      {shape.lip ? <path className="lab-glass__lip" d={shape.lip} /> : null}
+    </g>
+  );
+}
+
+export function ContainerGraphic(props) {
+  var item = props.item;
+  var shape = GLASS[item.type] || GLASS.beaker;
+  var prefix = 'lab-' + item.id;
+  var clipId = prefix + '-clip';
+  var height = liquidHeight(item, shape);
+
+  return (
+    <svg className="lab-vessel__svg" viewBox="0 0 80 104" aria-hidden="true" focusable="false">
+      <GlassDefs prefix={prefix} shape={shape} />
+
+      {/* 玻璃本体：半透明填充，让后面的液面隐约透出玻璃厚度 */}
+      <path className="lab-glass__fill" d={shape.body} fill={'url(#' + prefix + '-glass)'} />
+
+      <LiquidLayer
+        shape={shape}
+        height={height}
+        color={item.color}
+        clipId={clipId}
+        prefix={prefix}
+      />
+
+      {/* 放气或沸腾时从液面升起气泡；沸腾的气泡更多更密（lab-bubbles--boil）。 */}
+      {item.gas || item.boiling ? (
+        <Bubbles shape={shape} height={height} clipId={clipId} boiling={!!item.boiling} />
+      ) : null}
+      <SolidMarks contents={item.contents} shape={shape} clipId={clipId} />
+
+      {/* 纵向薄雾压在液体上：玻璃挡在前面，液体颜色略被提亮 */}
+      <path className="lab-glass__veil" d={shape.body} fill={'url(#' + prefix + '-veil)'} />
+
+      <GlassMarks shape={shape} />
+      <path className="lab-glass" d={shape.body} />
+    </svg>
+  );
+}
