@@ -20,41 +20,62 @@ function round(value) {
 }
 
 var GLASS = {
+  /*
+   * 烧杯：直筒杯身 + 右侧导流槽（倒液时看得见液体从哪边出去）+ 杯壁印刷刻度。
+   * body 是裁切与描边的唯一轮廓，spout 是叠在轮廓上的外翻唇边，
+   * graduations 里的毫升数用 <text> 印在杯壁左侧，和真烧杯的刻度一致。
+   */
   beaker: {
-    body: 'M14 26 H66 V90 Q66 96 60 96 H20 Q14 96 14 90 Z',
-    top: 28,
+    /* 右侧杯口直接收成一个尖嘴（导流槽），倒液时液体从这一侧离开杯口 */
+    body:
+      'M14 26.2 V90 Q14 96 20 96 H60 Q66 96 66 90 V28.6 L69.6 22.9 Q67 21.4 63.8 25.2 L63.4 26.2 H14 Z',
+    top: 28.4,
     bottom: 94,
     x: 14,
     width: 52,
-    rim: 'M13.2 25.4 H66.8',
-    mouthArc: 'M14.2 26.6 Q40 29.8 65.8 26.6',
+    spoutArc: 'M63.9 25.6 Q66.8 23.8 69 23.5',
+    rim: 'M13.4 25.8 H63.6',
+    mouthArc: 'M14.4 27 Q40 30.6 63.2 27',
     wall: 'M16.6 30 V88.4 Q16.9 93.2 20.6 93.6',
     edge: 'M64.8 28 V90.2 Q64.8 95.3 59.4 95.3',
     base: 'M20.2 92.2 Q40 96.7 59.8 92.2',
     highlight: 'M18.8 33 V86.6',
     highlightSoft: 'M61.2 35 V72',
+    gloss: { cx: 23.4, cy: 62, rx: 8.6, ry: 26 },
+    graduations: [
+      { y: 34, text: '200', x1: 16.8, x2: 23.6, tx: 25.4, anchor: 'start' },
+      { y: 48, text: '150', x1: 16.8, x2: 23.6, tx: 25.4, anchor: 'start' },
+      { y: 62, text: '100', x1: 16.8, x2: 23.6, tx: 25.4, anchor: 'start' },
+      { y: 76, text: '50', x1: 16.8, x2: 23.6, tx: 25.4, anchor: 'start' }
+    ],
     ticks: [
-      [80, 18, 24],
-      [66, 18, 24],
-      [52, 18, 28],
-      [38, 18, 24]
+      [41, 16.8, 20.4],
+      [55, 16.8, 20.4],
+      [69, 16.8, 20.4]
     ]
   },
   'test-tube': {
-    body: 'M30 14 H50 V82 Q50 94 40 94 Q30 94 30 82 Z',
+    body: 'M30.6 14 H49.4 V78 Q49.4 94 40 94 Q30.6 94 30.6 78 Z',
     top: 16,
     bottom: 93,
-    x: 30,
-    width: 20,
-    mouth: { cx: 40, cy: 14.2, rx: 10.2, ry: 2.4 },
-    mouthArc: 'M31.2 15.6 Q40 18.4 48.8 15.6',
-    edge: 'M49.1 16.6 V81.8 Q49.1 92.7 40 92.7 Q32.2 92.7 31.6 83.4',
-    base: 'M32.4 87.2 Q40 92.4 47.6 87.2',
-    highlight: 'M32.8 19 V79',
-    highlightSoft: 'M47.2 21 V42',
+    x: 30.6,
+    width: 18.8,
+    mouth: { cx: 40, cy: 14.2, rx: 9.4, ry: 2.2 },
+    rim: 'M30.2 13.6 H49.8',
+    mouthArc: 'M31 16 Q40 19 49 16',
+    edge: 'M48.4 17.4 V77.6 Q48.4 92.6 40 92.6 Q33.4 92.6 32.2 81',
+    base: 'M36 92.8 Q40 94.6 44 92.8',
+    highlight: 'M33 19.6 V77',
+    highlightSoft: 'M46.8 21 V44',
+    gloss: { cx: 34.4, cy: 58, rx: 3.2, ry: 24 },
+    graduations: [
+      { y: 40, text: '15', x1: 31.2, x2: 35.2, tx: 36.6, anchor: 'start' },
+      { y: 55, text: '10', x1: 31.2, x2: 35.2, tx: 36.6, anchor: 'start' },
+      { y: 70, text: '5', x1: 31.2, x2: 35.2, tx: 36.6, anchor: 'start' }
+    ],
     ticks: [
-      [46, 30.4, 35.4],
-      [62, 30.4, 35.4]
+      [47.5, 31.2, 33.6],
+      [62.5, 31.2, 33.6]
     ]
   },
   erlenmeyer: {
@@ -102,33 +123,35 @@ var GLASS = {
     mark: 'M28.6 62 Q40 65 51.4 62'
   },
   /*
-   * 试剂瓶（细口瓶）：直筒瓶身 + 短颈 + 玻璃瓶塞。
+   * 试剂瓶（细口瓶）：圆肩瓶身 + 短颈 + 玻璃瓶塞 + 白底黑字标签。
+   * labelRect / labelBand 是标签纸的几何，标签文字由 BottleLabel 按 item.label
+   * 逐行排（名称 / 化学式 / 等级 / 净含量）；没有 label 的空瓶留一张空白标签。
    * stopper 字段里的几何同时被瓶塞图形与点击热区使用；开塞后瓶塞按 CSS
    * 抬离瓶口（见 pages.css 的 .lab-stopper--open）。
    */
   'reagent-bottle': {
-    body: 'M33 30 V17 H47 V30 H55 Q59 30 59 34 V89 Q59 95.5 52.5 95.5 H27.5 Q21 95.5 21 89 V34 Q21 30 25 30 Z',
-    top: 34,
-    bottom: 94.5,
+    body: 'M34 30 V18 Q34 14.6 37.4 14.6 H42.6 Q46 14.6 46 18 V30 Q52 31.8 55.4 35.2 Q59 39 59 45.4 V89 Q59 96 52 96 H28 Q21 96 21 89 V45.4 Q21 39 24.6 35.2 Q28 31.8 34 30 Z',
+    top: 37,
+    bottom: 95,
     x: 21,
     width: 38,
-    mouth: { cx: 40, cy: 16, rx: 7, ry: 1.9 },
-    mouthArc: 'M33.4 17.4 Q40 19.6 46.6 17.4',
-    wall: 'M24.4 36 V87.4',
-    edge: 'M58.2 36.4 V87.6 Q58.2 94.2 51.8 94.4',
-    base: 'M25.4 91.4 Q40 95.4 54.6 91.4',
-    highlight: 'M25.6 39 V85.6',
-    highlightSoft: 'M55.4 41 V68',
-    ticks: [
-      [86, 50, 55],
-      [74, 50, 55],
-      [62, 50, 55]
-    ],
+    mouth: { cx: 40, cy: 14.4, rx: 6.2, ry: 1.8 },
+    neckRing: 'M33.6 16.6 H46.4',
+    mouthArc: 'M34 16 Q40 18.2 46 16',
+    wall: 'M23.6 47 V89.6',
+    edge: 'M57.6 47 V88 Q57.6 94.6 51.6 94.8',
+    base: 'M25.6 91.4 Q40 95.6 54.4 91.4',
+    highlight: 'M24.8 49 V86',
+    highlightSoft: 'M55 51 V70',
+    gloss: { cx: 27.4, cy: 72, rx: 4.4, ry: 20 },
+    ticks: [],
+    labelRect: { x: 25.2, y: 52, width: 29.6, height: 26.4 },
+    labelBand: { x: 25.2, y: 52, width: 29.6, height: 2.2 },
     stopper: {
-      plug: 'M34.7 18 L35.4 9.8 H44.6 L45.3 18 Z',
-      knob: 'M40 1.4 Q44.3 1.4 44.3 5.4 Q44.3 9.4 40 9.4 Q35.7 9.4 35.7 5.4 Q35.7 1.4 40 1.4 Z',
-      spec: 'M37.2 4.6 Q37.2 2.9 38.7 2.5',
-      hit: { x: 31.4, y: 0.4, width: 17.2, height: 19.6 }
+      plug: 'M34.2 15.8 L35 8.8 H45 L45.8 15.8 Z',
+      knob: 'M40 1 Q44.6 1 44.6 5.2 Q44.6 9.4 40 9.4 Q35.4 9.4 35.4 5.2 Q35.4 1 40 1 Z',
+      spec: 'M37 4.4 Q37 2.7 38.6 2.4',
+      hit: { x: 31, y: 0.2, width: 18, height: 18.8 }
     }
   }
 };
@@ -150,20 +173,14 @@ function liquidHeight(item, shape) {
   return Math.max(8, (shape.bottom - shape.top) * Math.pow(ratio, 0.75));
 }
 
-/* 一条由 segments 个波峰组成的横波，用于液面顶边。 */
+/* 一条由 segments 个波峰组成的横波，用于液面顶边；相邻波峰上下交替，才是一条平滑的波。 */
 function wavePath(left, right, y, crest, segments) {
   var step = (right - left) / segments;
   var d = 'M' + round(left) + ' ' + round(y);
 
   for (var i = 0; i < segments; i += 1) {
-    d +=
-      ' q' +
-      round(step / 2) +
-      ' ' +
-      round(-crest * 2) +
-      ' ' +
-      round(step) +
-      ' 0';
+    var lift = i % 2 === 0 ? -crest * 2 : crest * 2;
+    d += ' q' + round(step / 2) + ' ' + round(lift) + ' ' + round(step) + ' 0';
   }
 
   return d;
@@ -198,12 +215,39 @@ function GlassDefs(props) {
         <stop offset="1" stopColor="#111827" stopOpacity="0.09" />
       </linearGradient>
 
-      {/* 液体纵深：液面下方高光、靠近底部略暗，模拟折射 */}
+      {/* 液体纵深：液面下方高光、靠近底部略暗，模拟折射（无色液体靠这层冷调读出「有液体」） */}
       <linearGradient id={prefix + '-liquid-shade'} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stopColor="#ffffff" stopOpacity="0.3" />
-        <stop offset="0.24" stopColor="#ffffff" stopOpacity="0.04" />
-        <stop offset="0.7" stopColor="#0f2b33" stopOpacity="0.02" />
-        <stop offset="1" stopColor="#0f2b33" stopOpacity="0.16" />
+        <stop offset="0" stopColor="#ffffff" stopOpacity="0.34" />
+        <stop offset="0.22" stopColor="#ffffff" stopOpacity="0.03" />
+        <stop offset="0.62" stopColor="#8fb0bd" stopOpacity="0.08" />
+        <stop offset="1" stopColor="#6f93a0" stopOpacity="0.2" />
+      </linearGradient>
+
+      {/* 液面正下方的一层柔光：液体不是一块平涂色，靠它做出「有厚度」的感觉 */}
+      <linearGradient id={prefix + '-liquid-top'} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#ffffff" stopOpacity="0.42" />
+        <stop offset="0.55" stopColor="#ffffff" stopOpacity="0.08" />
+        <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+      </linearGradient>
+
+      {/* 液面中央的反光斑 */}
+      <radialGradient id={prefix + '-sheen'} cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stopColor="#ffffff" stopOpacity="0.4" />
+        <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+      </radialGradient>
+
+      {/* 玻璃上的柔和反光：横向的漫反射让直筒看起来是弧面 */}
+      <radialGradient id={prefix + '-gloss'} cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stopColor="#ffffff" stopOpacity="0.78" />
+        <stop offset="0.55" stopColor="#ffffff" stopOpacity="0.2" />
+        <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+      </radialGradient>
+
+      {/* 标签纸：米白纸浆质感，边缘略暗 */}
+      <linearGradient id={prefix + '-label'} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#ffffff" />
+        <stop offset="0.55" stopColor="#faf9f3" />
+        <stop offset="1" stopColor="#eeece3" />
       </linearGradient>
     </defs>
   );
@@ -232,6 +276,23 @@ function LiquidLayer(props) {
           <path className="lab-liquid__haze" d={body} style={{ opacity: haze }} />
         ) : null}
         <path className="lab-liquid__shade" d={body} fill={'url(#' + props.prefix + '-liquid-shade)'} />
+        {/* 液面下的一层柔光：液体有纵深感，不是一块平涂色 */}
+        <rect
+          className="lab-liquid__top"
+          x={round(shape.x - 4)}
+          y={round(surface)}
+          width={round(shape.width + 8)}
+          height={round(Math.min(18, height))}
+          fill={'url(#' + props.prefix + '-liquid-top)'}
+        />
+        <ellipse
+          className="lab-liquid__sheen"
+          cx={round(shape.x + shape.width / 2)}
+          cy={round(surface + 2.6)}
+          rx={round(Math.max(3, shape.width / 2 - 1.4))}
+          ry={round(Math.min(3.4, Math.max(1.6, height * 0.16)))}
+          fill={'url(#' + props.prefix + '-sheen)'}
+        />
         <path className="lab-liquid__meniscus" d={wave} />
         <path className="lab-liquid__meniscus-shade" d={wave} transform="translate(0 1.2)" />
       </g>
@@ -391,9 +452,19 @@ function Steam(props) {
 function GlassMarks(props) {
   var shape = props.shape;
   var ticks = shape.ticks || [];
+  var graduations = shape.graduations || [];
 
   return (
     <g className="lab-glass-marks" aria-hidden="true">
+      {/* 导流槽（烧杯唇边）：先铺一层玻璃色，再压一条内侧弧线 */}
+      {shape.spout ? (
+        <path
+          className="lab-glass__spout"
+          d={shape.spout}
+          fill={'url(#' + props.prefix + '-glass)'}
+        />
+      ) : null}
+      {shape.spoutArc ? <path className="lab-glass__spout-arc" d={shape.spoutArc} /> : null}
       {shape.wall ? <path className="lab-glass__wall" d={shape.wall} /> : null}
       {shape.edge ? <path className="lab-glass__edge" d={shape.edge} /> : null}
       {shape.base ? <path className="lab-glass__base" d={shape.base} /> : null}
@@ -404,6 +475,17 @@ function GlassMarks(props) {
       {shape.neckHighlight ? (
         <path className="lab-glass__specular lab-glass__specular--soft" d={shape.neckHighlight} />
       ) : null}
+      {/* 印刷刻度：短线 + 毫升数，像真器材上的丝印 */}
+      {graduations.map(function (grad, index) {
+        return (
+          <g className="lab-glass__grad" key={'grad-' + index}>
+            <path d={'M' + grad.x1 + ' ' + grad.y + ' H' + grad.x2} />
+            <text x={grad.tx} y={round(grad.y + 1.1)} textAnchor={grad.anchor}>
+              {grad.text}
+            </text>
+          </g>
+        );
+      })}
       {ticks.map(function (tick, index) {
         return (
           <path
@@ -414,6 +496,7 @@ function GlassMarks(props) {
         );
       })}
       {shape.mark ? <path className="lab-glass__mark" d={shape.mark} /> : null}
+      {shape.neckRing ? <path className="lab-glass__rim" d={shape.neckRing} /> : null}
       {shape.mouth ? (
         <ellipse
           className="lab-glass__mouth"
@@ -426,6 +509,122 @@ function GlassMarks(props) {
       {shape.mouthArc ? <path className="lab-glass__mouth-arc" d={shape.mouthArc} /> : null}
       {shape.rim ? <path className="lab-glass__rim" d={shape.rim} /> : null}
       {shape.lip ? <path className="lab-glass__lip" d={shape.lip} /> : null}
+    </g>
+  );
+}
+
+/*
+ * 玻璃表面的漫反射反光斑：一块被瓶身裁切的柔和白光。
+ * 直筒玻璃只靠描边会显得很「线框」，这一层把它压成有弧面的玻璃。
+ */
+function GlossOverlay(props) {
+  var gloss = props.shape.gloss;
+  if (!gloss) return null;
+
+  return (
+    <g clipPath={'url(#' + props.clipId + ')'} className="lab-glass__gloss" aria-hidden="true">
+      <ellipse
+        cx={gloss.cx}
+        cy={gloss.cy}
+        rx={gloss.rx}
+        ry={gloss.ry}
+        fill={'url(#' + props.prefix + '-gloss)'}
+      />
+    </g>
+  );
+}
+
+/*
+ * 瓶身标签：白纸底 + 黑色印刷字（名称 / 化学式 / 等级 / 净含量）。
+ * 预置试剂瓶带 item.label；空细口瓶留一张空白标签（只有纸、色带与两条横线），
+ * 和实验台上「还没贴标签的空瓶」一致。文字用 viewBox 坐标排，缩放后不会跑位。
+ */
+function BottleLabel(props) {
+  var shape = props.shape;
+  var rect = shape.labelRect;
+  if (!rect) return null;
+
+  var info = props.label || null;
+  var band = shape.labelBand;
+  var cx = round(rect.x + rect.width / 2);
+
+  return (
+    <g className="lab-label" aria-hidden="true">
+      <rect
+        className="lab-label__paper"
+        x={rect.x}
+        y={rect.y}
+        width={rect.width}
+        height={rect.height}
+        rx="0.7"
+        fill={'url(#' + props.prefix + '-label)'}
+      />
+      {band ? (
+        <rect
+          className="lab-label__band"
+          x={band.x}
+          y={band.y}
+          width={band.width}
+          height={band.height}
+          style={info && info.band ? { fill: info.band } : undefined}
+        />
+      ) : null}
+      {info ? (
+        <g className="lab-label__text">
+          <text className="lab-label__title" x={cx} y={round(rect.y + 8.8)} textAnchor="middle">
+            {info.title}
+          </text>
+          <text className="lab-label__formula" x={cx} y={round(rect.y + 14.2)} textAnchor="middle">
+            {info.formula}
+          </text>
+          <path
+            className="lab-label__rule"
+            d={
+              'M' +
+              round(rect.x + 3.6) +
+              ' ' +
+              round(rect.y + 16.6) +
+              ' H' +
+              round(rect.x + rect.width - 3.6)
+            }
+          />
+          <text className="lab-label__meta" x={cx} y={round(rect.y + 20.4)} textAnchor="middle">
+            {info.grade}
+          </text>
+          <text
+            className="lab-label__volume"
+            x={round(rect.x + rect.width - 2.2)}
+            y={round(rect.y + rect.height - 2.2)}
+            textAnchor="end"
+          >
+            {info.volume}
+          </text>
+        </g>
+      ) : (
+        <path
+          className="lab-label__blank"
+          d={
+            'M' +
+            round(rect.x + 4) +
+            ' ' +
+            round(rect.y + 9) +
+            ' H' +
+            round(rect.x + rect.width - 4) +
+            ' M' +
+            round(rect.x + 4) +
+            ' ' +
+            round(rect.y + 15) +
+            ' H' +
+            round(rect.x + rect.width - 4) +
+            ' M' +
+            round(rect.x + 4) +
+            ' ' +
+            round(rect.y + 21) +
+            ' H' +
+            round(rect.x + rect.width - 11)
+          }
+        />
+      )}
     </g>
   );
 }
@@ -513,7 +712,11 @@ export function ContainerGraphic(props) {
       {/* 纵向薄雾压在液体上：玻璃挡在前面，液体颜色略被提亮 */}
       <path className="lab-glass__veil" d={shape.body} fill={'url(#' + prefix + '-veil)'} />
 
-      <GlassMarks shape={shape} />
+      {/* 瓶身标签贴在玻璃内侧，玻璃边缘与反光会压在标签之上 */}
+      <BottleLabel shape={shape} label={item.label} prefix={prefix} />
+
+      <GlassMarks shape={shape} prefix={prefix} />
+      <GlossOverlay shape={shape} prefix={prefix} clipId={clipId} />
       <path className="lab-glass" d={shape.body} />
       {/* 水蒸气画在玻璃之上：沸腾的雾气会越过器物轮廓继续上升 */}
       {item.boiling && height > 0 ? <Steam shape={shape} /> : null}

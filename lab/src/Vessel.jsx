@@ -183,22 +183,100 @@ function StandGraphic() {
   );
 }
 
-function RodGraphic() {
+/*
+ * 玻璃棒：一根两端磨圆的高硼硅玻璃杆，靠渐变做圆柱感（左侧高光、右缘偏暗），
+ * 斜放在台面上；Step 3 的搅拌会把这根杆送进容器里并让它绕圈。
+ */
+function RodGraphic(props) {
+  var prefix = props.prefix;
+
   return (
-    <g className="lab-tool-drawing">
-      <path d="M24 88 L56 24" />
-      <path d="M20 94 H44" />
+    <g className="lab-rod">
+      <defs>
+        <linearGradient id={prefix + '-rod'} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.8" />
+          <stop offset="0.14" stopColor="#ffffff" stopOpacity="0.46" />
+          <stop offset="0.46" stopColor="#eef4f6" stopOpacity="0.22" />
+          <stop offset="0.82" stopColor="#a9b8be" stopOpacity="0.3" />
+          <stop offset="1" stopColor="#8798a0" stopOpacity="0.44" />
+        </linearGradient>
+      </defs>
+
+      <g transform="rotate(-16 40 56)">
+        {/* 杆身 */}
+        <rect
+          x="36.6"
+          y="14"
+          width="6.8"
+          height="78"
+          rx="3.4"
+          fill={'url(#' + prefix + '-rod)'}
+          stroke="rgba(0, 0, 0, 0.15)"
+          strokeWidth="1"
+        />
+        {/* 左缘长高光 + 右缘暗边，杆子才有圆柱的弧度 */}
+        <path className="lab-rod__spec" d="M38.5 18.5 V88" />
+        <path className="lab-rod__edge" d="M41.8 18.5 V88" />
+        {/* 两端磨圆的收口 */}
+        <path className="lab-rod__tip" d="M37.4 16.4 Q40 14.2 42.6 16.4" />
+        <path className="lab-rod__tip" d="M37.4 89.6 Q40 91.8 42.6 89.6" />
+      </g>
     </g>
   );
 }
 
-function DropperGraphic() {
+/*
+ * 胶头滴管：橡胶头（深灰渐变 + 高光）+ 细玻璃管（透明 + 白高光 + 内部液柱）。
+ * 液柱颜色按滴管当前吸附的试剂着色，没有试剂时是空的。
+ */
+function DropperGraphic(props) {
+  var prefix = props.prefix;
+  var filled = !!props.filled;
+
   return (
-    <g className="lab-tool-drawing">
-      <path d="M40 18 V28" />
-      <path d="M31 32 Q31 24 40 24 Q49 24 49 32 Q49 40 40 40 Q31 40 31 32 Z" />
-      <path d="M36 40 V82 Q36 90 40 90 Q44 90 44 82 V40" />
-      <path d="M34 82 H46" />
+    <g className="lab-dropper">
+      <defs>
+        <linearGradient id={prefix + '-bulb'} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#6d7478" />
+          <stop offset="0.24" stopColor="#9aa3a7" />
+          <stop offset="0.55" stopColor="#5d6569" />
+          <stop offset="1" stopColor="#3f4649" />
+        </linearGradient>
+        <linearGradient id={prefix + '-tube'} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.85" />
+          <stop offset="0.22" stopColor="#ffffff" stopOpacity="0.36" />
+          <stop offset="0.72" stopColor="#ffffff" stopOpacity="0.14" />
+          <stop offset="1" stopColor="#93a4ab" stopOpacity="0.34" />
+        </linearGradient>
+      </defs>
+
+      {/* 橡胶头：略扁的椭球，左上一条高光 */}
+      <ellipse
+        className="lab-dropper__bulb"
+        cx="40"
+        cy="17"
+        rx="8.4"
+        ry="9.6"
+        fill={'url(#' + prefix + '-bulb)'}
+      />
+      <path className="lab-dropper__bulb-spec" d="M34.8 12.2 Q35.4 8.8 38.6 8.2" />
+      {/* 胶头与玻璃管的收口 */}
+      <path className="lab-dropper__collar" d="M36.4 25.2 H43.6" />
+      {/* 玻璃细管：直管收成一根很细的滴嘴 */}
+      <path
+        className="lab-dropper__tube"
+        d="M37.4 25.2 H42.6 V74.4 L41.2 84.4 Q40 87.2 38.8 84.4 L37.4 74.4 Z"
+        fill={'url(#' + prefix + '-tube)'}
+      />
+      {/* 管内液柱（吸了试剂才出现） */}
+      {filled ? (
+        <path
+          className="lab-dropper__liquid"
+          d="M38.4 44 H41.6 V74 L40.9 81.4 Q40 82.6 39.1 81.4 L38.4 74 Z"
+        />
+      ) : null}
+      <path className="lab-dropper__spec" d="M38.8 29 V73.6" />
+      <path className="lab-dropper__tip" d="M38.9 86.2 Q40 87.8 41.1 86.2" />
     </g>
   );
 }
@@ -285,8 +363,8 @@ function ToolGraphic(props) {
       ) : null}
       {type === 'stand' ? <StandGraphic /> : null}
       {type === 'match' ? <MatchGraphic burning={!!item.lit} /> : null}
-      {type === 'rod' ? <RodGraphic /> : null}
-      {type === 'dropper' ? <DropperGraphic /> : null}
+      {type === 'rod' ? <RodGraphic prefix={prefix} /> : null}
+      {type === 'dropper' ? <DropperGraphic prefix={prefix} filled={!!item.dropperFill} /> : null}
       {type === 'wire-gauze' ? <GauzeGraphic prefix={prefix} hot={!!item.hot} /> : null}
       {type === 'ph-paper' ? <PaperGraphic /> : null}
     </svg>

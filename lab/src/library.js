@@ -3,9 +3,60 @@
  * ------------------------------------------------------------------
  * kind 区分容器、工具与试剂；容器带容量，试剂带默认加入量和物态。
  * 试剂名称使用中文，chemical 保留 ASCII 化学式供反应引擎匹配。
+ *
+ * 「预置试剂瓶」是实验室里最常拿的东西：不是空烧杯，而是贴好标签、装好液体、
+ * 塞着瓶塞的整瓶试剂。这类条目的字段：
+ *   shape    指向 Glass.jsx 的器型（细口瓶），store 用它做 item.type
+ *   stock    true 表示「出厂预置」，日志用「拖拽 … 至 实验台」，不进试剂通道
+ *   label    瓶身标签（白底黑字）上的四行文字
+ *   reagent  预置内容物，store 建实体时直接灌进去（体积按 capacity 计）
  */
-
 export const LAB_LIBRARY = [
+  {
+    id: 'stocks',
+    label: '预置试剂瓶',
+    items: [
+      {
+        id: 'stock-hcl',
+        name: '盐酸试剂瓶',
+        formula: 'HCl',
+        shape: 'reagent-bottle',
+        kind: 'container',
+        capacity: 500,
+        stopper: true,
+        stock: true,
+        swatch: '#e2ecef',
+        label: { title: '盐酸', formula: 'HCl', grade: '分析纯 AR', volume: '500mL', band: '#b8453a' },
+        reagent: { chemical: 'HCl', label: 'HCl', state: 'liquid', volume: 500 }
+      },
+      {
+        id: 'stock-naoh',
+        name: '氢氧化钠试剂瓶',
+        formula: 'NaOH',
+        shape: 'reagent-bottle',
+        kind: 'container',
+        capacity: 500,
+        stopper: true,
+        stock: true,
+        swatch: '#e8eeef',
+        label: { title: '氢氧化钠', formula: 'NaOH', grade: '分析纯 AR', volume: '500mL', band: '#3a6fb5' },
+        reagent: { chemical: 'NaOH', label: 'NaOH', state: 'liquid', volume: 500 }
+      },
+      {
+        id: 'stock-cuso4',
+        name: '硫酸铜试剂瓶',
+        formula: 'CuSO₄',
+        shape: 'reagent-bottle',
+        kind: 'container',
+        capacity: 500,
+        stopper: true,
+        stock: true,
+        swatch: '#4f8bc8',
+        label: { title: '硫酸铜', formula: 'CuSO₄', grade: '分析纯 AR', volume: '500mL', band: '#3a6fb5' },
+        reagent: { chemical: 'CuSO4', label: 'CuSO₄', state: 'liquid', volume: 500 }
+      }
+    ]
+  },
   {
     id: 'glassware',
     label: '基础容器',

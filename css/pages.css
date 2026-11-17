@@ -1208,11 +1208,22 @@
 }
 
 .lab-item__name {
+  flex: 1 1 auto;
   min-width: 0;
   color: var(--text-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.lab-item__swatch {
+  flex: none;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  margin-right: -0.3rem;
+  border: 1px solid rgba(17, 24, 39, 0.16);
+  border-radius: 1px;
 }
 
 .lab-item__formula {
@@ -1417,10 +1428,14 @@
 
 .lab-glass {
   fill: none;
-  stroke: currentColor;
+  stroke: rgba(0, 0, 0, 0.15);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.3;
+}
+
+.lab-vessel:hover .lab-glass {
+  stroke: rgba(0, 0, 0, 0.32);
 }
 
 .lab-glass__fill {
@@ -1486,6 +1501,99 @@
   stroke-width: 0.9;
 }
 
+/* 烧杯导流槽：外翻唇边用玻璃渐变填充，内侧再压一条弧线给出厚度 */
+.lab-glass__spout {
+  stroke: rgba(0, 0, 0, 0.15);
+  stroke-linejoin: round;
+  stroke-width: 1.1;
+}
+
+.lab-glass__spout-arc {
+  opacity: 0.55;
+  stroke: rgba(17, 24, 39, 0.28);
+  stroke-linecap: round;
+  stroke-width: 0.9;
+}
+
+/* 印刷刻度：短线 + 毫升数，丝印一样的灰黑细字 */
+.lab-glass__grad {
+  opacity: 0.62;
+  fill: none;
+  stroke: rgba(17, 24, 39, 0.3);
+  stroke-linecap: round;
+  stroke-width: 0.7;
+}
+
+.lab-glass__grad text {
+  fill: rgba(17, 24, 39, 0.52);
+  stroke: none;
+  font-family: var(--font-mono);
+  font-size: 2.9px;
+  letter-spacing: 0.1px;
+}
+
+/* 玻璃表面的漫反射反光斑：不参与命中，只提亮玻璃 */
+.lab-glass__gloss {
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* ---------- 试剂瓶标签：白纸底 + 黑色印刷字 ---------- */
+
+.lab-label {
+  pointer-events: none;
+}
+
+.lab-label__paper {
+  stroke: rgba(17, 24, 39, 0.16);
+  stroke-width: 0.6;
+}
+
+.lab-label__band {
+  fill: #3f6fa8;
+}
+
+.lab-label__title {
+  fill: rgba(17, 24, 39, 0.88);
+  font-family: var(--font);
+  font-size: 4.6px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.lab-label__formula {
+  fill: rgba(17, 24, 39, 0.78);
+  font-family: var(--font-mono);
+  font-size: 4.4px;
+  letter-spacing: 0.1px;
+}
+
+.lab-label__rule {
+  fill: none;
+  stroke: rgba(17, 24, 39, 0.3);
+  stroke-width: 0.5;
+}
+
+.lab-label__meta {
+  fill: rgba(17, 24, 39, 0.6);
+  font-family: var(--font);
+  font-size: 2.9px;
+  letter-spacing: 0.2px;
+}
+
+.lab-label__volume {
+  fill: rgba(17, 24, 39, 0.72);
+  font-family: var(--font-mono);
+  font-size: 2.9px;
+}
+
+.lab-label__blank {
+  fill: none;
+  stroke: rgba(17, 24, 39, 0.16);
+  stroke-linecap: round;
+  stroke-width: 0.7;
+}
+
 /* ---------- 瓶塞：点击开合，开塞后抬离瓶口 ---------- */
 
 .lab-stopper {
@@ -1523,10 +1631,10 @@
   pointer-events: all;
 }
 
-/* 打开：塞子抬起、歪向一边，浮在瓶口上方 */
+/* 打开：塞子抬起、歪向一边，浮在瓶口上方（抬升幅度只够离开瓶口，不脱离瓶子） */
 
 .lab-stopper--open {
-  transform: translate(-13px, -20px) rotate(15deg);
+  transform: translate(-4px, -4px) rotate(10deg);
 }
 
 .lab-stopper--open .lab-stopper__plug,
@@ -1576,8 +1684,14 @@
 }
 
 .lab-liquid__fill {
-  fill-opacity: 0.86;
+  fill-opacity: 0.9;
   transition: fill 480ms ease;
+}
+
+/* 液面柔光与反光斑：纯装饰层，不参与命中 */
+.lab-liquid__top,
+.lab-liquid__sheen {
+  pointer-events: none;
 }
 
 .lab-liquid__shade {
@@ -1586,14 +1700,14 @@
 
 .lab-liquid__meniscus {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.62);
+  stroke: rgba(255, 255, 255, 0.74);
   stroke-linecap: round;
   stroke-width: 1.3;
 }
 
 .lab-liquid__meniscus-shade {
   fill: none;
-  stroke: rgba(26, 54, 62, 0.16);
+  stroke: rgba(26, 54, 62, 0.26);
   stroke-linecap: round;
   stroke-width: 1.4;
 }
@@ -2268,6 +2382,71 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.6;
+}
+
+/* ---------- 玻璃棒 / 胶头滴管：渐变填充的拟物工具 ---------- */
+
+.lab-rod__spec {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-linecap: round;
+  stroke-width: 1.5;
+}
+
+.lab-rod__edge {
+  fill: none;
+  stroke: rgba(17, 24, 39, 0.18);
+  stroke-linecap: round;
+  stroke-width: 0.8;
+}
+
+.lab-rod__tip {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.82);
+  stroke-linecap: round;
+  stroke-width: 0.9;
+}
+
+.lab-dropper__tube {
+  stroke: rgba(0, 0, 0, 0.15);
+  stroke-width: 1;
+}
+
+.lab-dropper__bulb {
+  stroke: rgba(0, 0, 0, 0.22);
+  stroke-width: 1;
+}
+
+.lab-dropper__bulb-spec {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-linecap: round;
+  stroke-width: 1.6;
+}
+
+.lab-dropper__liquid {
+  fill: #cfe0e6;
+}
+
+.lab-dropper__spec {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-linecap: round;
+  stroke-width: 1.2;
+}
+
+.lab-dropper__collar {
+  fill: none;
+  stroke: rgba(17, 24, 39, 0.28);
+  stroke-linecap: round;
+  stroke-width: 1.4;
+}
+
+.lab-dropper__tip {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-linecap: round;
+  stroke-width: 0.9;
 }
 
 .lab-vessel__name {

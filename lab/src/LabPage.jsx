@@ -228,7 +228,13 @@ function LibraryItem(props) {
     data: { kind: 'library', item: item }
   });
 
-  var tail = item.formula || (item.capacity ? item.capacity + 'mL' : '');
+  var tail = item.formula
+    ? item.capacity
+      ? item.formula + ' · ' + item.capacity + 'mL'
+      : item.formula
+    : item.capacity
+      ? item.capacity + 'mL'
+      : '';
 
   return (
     <li
@@ -242,6 +248,9 @@ function LibraryItem(props) {
         props.onPick(item);
       }}
     >
+      {item.swatch ? (
+        <span className="lab-item__swatch" style={{ background: item.swatch }} aria-hidden="true" />
+      ) : null}
       <span className="lab-item__name">{item.name}</span>
       {tail ? <span className="lab-item__formula">{tail}</span> : null}
     </li>

@@ -95,16 +95,17 @@ var ITEM_HEIGHT = 128;
 
 /*
  * 瓶口在令牌内的 y：由 Glass.jsx 的 viewBox 换算（y = 2 + viewBoxY × 1.1538）。
- *   烧杯 rim 25.4 → 31.5；试管 / 锥形瓶 / 烧瓶 14 → 18.2；细口瓶 16 → 20.5
+ *   烧杯 rim 25.5 → 31.4；试管 rim 13.6 → 17.7；锥形瓶 / 烧瓶 14 → 18.2；
+ *   细口瓶（含预置试剂瓶）mouth 14.4 → 18.6
  * 倾倒对准、水柱起点都用这张表，不看 SVG 实际渲染高度。
  */
 var MOUTH_Y = {
-  beaker: 31.5,
-  'test-tube': 19,
+  beaker: 31.4,
+  'test-tube': 17.7,
   erlenmeyer: 18.2,
   'round-flask': 18.2,
   'volumetric-flask': 18.2,
-  'reagent-bottle': 20.5
+  'reagent-bottle': 18.6
 };
 
 /* 倾倒对准：X 中心差 ≤ POUR_ALIGN_X，且两者中心高差 ≤ POUR_DROP_Y（松手叠放）。 */
@@ -416,12 +417,16 @@ function createItem(source, point, index) {
   var fallbackX = 24 + (index % 4) * 124;
   var fallbackY = 24 + Math.floor(index / 4) * 140;
 
-  return {
+  var base = {
     id: 'lab-item-' + ITEM_SERIAL,
-    type: source.id,
+    /* 预置试剂瓶复用细口瓶器型：type 决定 Glass.jsx 画哪一只瓶子 */
+    type: source.shape || source.id,
     kind: source.kind,
     name: source.name,
     formula: source.formula || '',
+    /* stock = 出厂预置的整瓶试剂（瓶身贴标签、瓶里已有液体） */
+    stock: !!source.stock,
+    label: source.label || null,
     /* 实体边界：碰撞检测与页面定位共用，令牌外框不含任何猜测 */
     dimensions: { width: ITEM_WIDTH, height: ITEM_HEIGHT },
     x: Math.round(point ? point.x : fallbackX),
@@ -453,6 +458,16 @@ function createItem(source, point, index) {
     phenomenon: null,
     phenomenonAt: 0
   };
+
+  /*
+   * 预置试剂瓶出厂就是满的：内容物在建实体时一次灌进去，体积、颜色、pH
+   * 都由 syncItem 派生，和后面真正倒出来时的口径完全一致。
+   */
+  if (source.reagent) {
+    return syncItem(base, [Object.assign({ mass: 0 }, source.reagent)], 25);
+  }
+
+  return base;
 }
 
 function reagentLabel(reagent) {
@@ -588,7 +603,21 @@ export var useLabStore = create(function (set, get) {
         items: state.items.concat(next),
         selectedId: next.id
       });
-      addLog('操作', '放置 ' + source.name + '。');
+      if (source.stock) {
+        /* 预置试剂瓶：日志按实验室口吻写成「拖拽 500mL 盐酸试剂瓶 至 实验台。」 */
+        var filled = next.contents[0];
+        addLog(
+          '系统',
+          '拖拽 ' +
+            (source.label ? source.label.volume + ' ' : '') +
+            source.name +
+            ' 至 实验台' +
+            (filled ? '（' + filled.label + ' ' + next.volume + 'mL）' : '') +
+            '。'
+        );
+      } else {
+        addLog('操作', '放置 ' + source.name + '。');
+      }
       return next.id;
     },
 
