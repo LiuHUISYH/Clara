@@ -1,14 +1,19 @@
 /**
  * Vessel.jsx —— 虚拟实验室的器材出口：容器交给 Glass.jsx，工具在这里画
  * ------------------------------------------------------------------
- * 容器（烧杯 / 试管 / 锥形瓶 / 圆底烧瓶 / 容量瓶）是玻璃仪器 + 液体 + 沉淀，
- * 统一由 Glass.jsx 用 SVG 绘制；本文件画酒精灯（玻璃灯体 + 灯帽 + 三层火焰）、
- * 火柴（梗 + 火柴头 + 划燃后的小火苗）与铁架台、玻璃棒、胶头滴管、石棉网、
- * pH 试纸，并提供 LabGraphic 出口。石棉网在火焰上会转暖色，提示正在匀热。
- * 白底玻璃统一走「浅灰描边 + 白色高光 + 右缘厚度」的做法，不引入深色。
+ * 容器（烧杯 / 试管 / 锥形瓶 / 圆底烧瓶 / 容量瓶 / 试剂瓶）是玻璃仪器 + 液体 +
+ * 沉淀，统一由 Glass.jsx 用 SVG 绘制；本文件画酒精灯（玻璃灯体 + 灯帽 + 三层
+ * 火焰）、火柴（梗 + 火柴头 + 划燃后的小火苗）与铁架台、玻璃棒、胶头滴管、
+ * 石棉网、pH 试纸，并提供 LabGraphic 出口。
+ *
+ * 工具与容器共用 art.js 的毫米基准：酒精灯 80×118、铁架台 200×560、
+ * 石棉网 120×10、玻璃棒 10×240、胶头滴管 24×112 —— 每件 svg 的 viewBox
+ * 就是它自己的真实尺寸，并排放在台面上时比例是对的（铁架台比烧杯高五倍多）。
+ * 白底玻璃 / 金属统一走「浅灰描边 + 白色高光 + 右缘厚度」的做法，不引入深色。
  */
 import React from 'react';
 import { ContainerGraphic } from './Glass';
+import { TOOLS } from './art';
 
 function BurnerDefs(props) {
   var prefix = props.prefix;
@@ -44,9 +49,10 @@ function BurnerDefs(props) {
 }
 
 /*
- * 酒精灯：玻璃灯体（含酒精液面）+ 金属灯芯管 + 灯芯 + 可移除灯帽。
+ * 酒精灯：φ72 玻璃灯体（含酒精液面）+ 金属灯芯管 + 灯芯 + 可移除灯帽。
  * 未点燃时灯帽扣在灯芯管上；点燃后灯帽平移到灯旁台面（CSS transform 过渡），
  * 火焰由外焰 / 中焰 / 焰心三层 SVG 路径叠加而成，动画在 pages.css。
+ * 焰尖 y=8、焰心 x=40 —— store 的 inFlame 判定读的就是这两个数。
  */
 function BurnerGraphic(props) {
   var prefix = props.prefix;
@@ -57,71 +63,81 @@ function BurnerGraphic(props) {
       <BurnerDefs prefix={prefix} />
 
       {/* 台面上的接触阴影 */}
-      <ellipse className="lab-burner__shadow" cx="40" cy="96.6" rx="20.5" ry="2.4" />
+      <ellipse className="lab-burner__shadow" cx="40" cy="114.4" rx="34" ry="2.8" />
 
-      {/* 灯体玻璃 */}
+      {/* 灯体玻璃 φ72 */}
       <path
         className="lab-burner__body"
-        d="M21.8 95.6 Q20.4 79.8 29.8 67 Q33 62.6 33 56.4 H47 Q47 62.6 50.2 67 Q59.6 79.8 58.2 95.6 Z"
+        d="M6.4 112 Q4.6 82 22.4 62 Q26 58 26 54.4 H54 Q54 58 57.6 62 Q75.4 82 73.6 112 Z"
         fill={'url(#' + prefix + '-body)'}
       />
 
       {/* 灯内酒精：液面带一点起伏，底部略暗 */}
       <path
         className="lab-burner__alcohol"
-        d="M23.4 84.4 Q40 87.1 56.6 84.4 L57 93.6 Q40 96.2 23 93.6 Z"
+        d="M9.6 94 Q40 98 70.4 94 L72 108.4 Q40 113 8 108.4 Z"
       />
 
       {/* 瓶身轮廓与内壁高光 */}
-      <path className="lab-burner__outline" d="M21.8 95.6 Q20.4 79.8 29.8 67 Q33 62.6 33 56.4 H47 Q47 62.6 50.2 67 Q59.6 79.8 58.2 95.6" />
-      <path className="lab-burner__specular" d="M25 89.4 Q24 78 31.4 67.6 Q34 63.4 34 58.4" />
-      <path className="lab-burner__specular lab-burner__specular--soft" d="M55 88 Q55.6 77 49.4 68.4" />
+      <path
+        className="lab-burner__outline"
+        d="M6.4 112 Q4.6 82 22.4 62 Q26 58 26 54.4 M54 54.4 Q54 58 57.6 62 Q75.4 82 73.6 112"
+      />
+      <path className="lab-burner__specular" d="M12 106 Q10.6 84 22 66 Q26 60 26 57" />
+      <path className="lab-burner__specular lab-burner__specular--soft" d="M68 104 Q68.6 84 58 64" />
 
       {/* 灯芯管 */}
-      <path className="lab-burner__collar" d="M31.6 56.6 H48.4 V54.2 H31.6 Z" fill={'url(#' + prefix + '-metal)'} />
-      <path className="lab-burner__collar" d="M34 54.2 H46 V49.4 H34 Z" fill={'url(#' + prefix + '-metal)'} />
-      <path className="lab-burner__collar-line" d="M31.6 55.4 H48.4" />
-      <path className="lab-burner__collar-line" d="M34 50.6 H46" />
+      <path className="lab-burner__collar" d="M28 54.6 H52 V50.8 H28 Z" fill={'url(#' + prefix + '-metal)'} />
+      <path className="lab-burner__collar" d="M32 50.8 H48 V44.6 H32 Z" fill={'url(#' + prefix + '-metal)'} />
+      <path className="lab-burner__collar-line" d="M28 52.8 H52" />
+      <path className="lab-burner__collar-line" d="M32 47.8 H48" />
 
       {/* 灯芯：未点燃时露出一小截 */}
-      <path className="lab-burner__wick" d="M37.4 49.4 H42.6 V45.2 H37.4 Z" />
+      <path className="lab-burner__wick" d="M37.4 44.6 H42.6 V39.4 H37.4 Z" />
 
       {lit ? (
         <g className={'lab-flame' + (props.inUse ? ' lab-flame--in-use' : '')} aria-hidden="true">
-          <ellipse className="lab-flame__glow" cx="40" cy="50" rx="12.4" ry="3.6" fill={'url(#' + prefix + '-glow)'} />
+          <ellipse
+            className="lab-flame__glow"
+            cx="40"
+            cy="37"
+            rx="15"
+            ry="4.4"
+            fill={'url(#' + prefix + '-glow)'}
+          />
           <path
             className="lab-flame__outer"
-            d="M40 21 C43.4 28.4 47.4 35.4 47.4 41.4 C47.4 46 44.6 49.8 42.6 50.8 C41.8 51.2 41 51.6 40 51.6 C39 51.6 38.2 51.2 37.4 50.8 C35.4 49.8 32.6 46 32.6 41.4 C32.6 35.4 36.6 28.4 40 21 Z"
+            d="M40 8 C43.8 16.4 48.4 24.6 48.4 32.4 C48.4 36.6 44.8 39.2 40 39.2 C35.2 39.2 31.6 36.6 31.6 32.4 C31.6 24.6 36.2 16.4 40 8 Z"
           />
           <path
             className="lab-flame__mid"
-            d="M40 29.6 C42.2 35.4 44.4 39.6 44.4 43 C44.4 45.8 42.6 48.2 41.2 49.2 C40.8 49.5 40.4 49.7 40 49.7 C39.6 49.7 39.2 49.5 38.8 49.2 C37.4 48.2 35.6 45.8 35.6 43 C35.6 39.6 37.8 35.4 40 29.6 Z"
+            d="M40 17.6 C42.4 23.4 44.8 28 44.8 31.8 C44.8 34.6 42.6 36.8 40 36.8 C37.4 36.8 35.2 34.6 35.2 31.8 C35.2 28 37.6 23.4 40 17.6 Z"
           />
           <path
             className="lab-flame__core"
-            d="M40 38.4 C41.6 41.8 42.8 44.4 42.8 46.2 C42.8 47.8 41.6 48.8 40 48.8 C38.4 48.8 37.2 47.8 37.2 46.2 C37.2 44.4 38.4 41.8 40 38.4 Z"
+            d="M40 27.4 C41.4 30.6 42.6 32.8 42.6 34.6 C42.6 36 41.4 37 40 37 C38.6 37 37.4 36 37.4 34.6 C37.4 32.8 38.6 30.6 40 27.4 Z"
           />
         </g>
       ) : null}
 
       {/* 灯帽：点燃后移到灯旁台面上 */}
       <g className={'lab-burner__cap' + (lit ? ' lab-burner__cap--off' : '')} aria-hidden="true">
-        <ellipse className="lab-burner__cap-shadow" cx="40" cy="58.2" rx="9.6" ry="1.7" />
+        <ellipse className="lab-burner__cap-shadow" cx="40" cy="54.6" rx="11" ry="1.8" />
         <path
           className="lab-burner__cap-body"
-          d="M32.2 58 H47.8 L47 46.6 Q46.9 45.4 45.6 45.4 H34.4 Q33.1 45.4 33 46.6 Z"
+          d="M28.8 54.6 H51.2 L50 40.4 Q49.8 38.6 48 38.6 H32 Q30.2 38.6 30 40.4 Z"
           fill={'url(#' + prefix + '-metal)'}
         />
-        <path className="lab-burner__cap-band" d="M32.2 55.6 H47.8" />
-        <path className="lab-burner__cap-highlight" d="M35.4 47.6 V54.4" />
-        <path className="lab-burner__cap-knob" d="M38.9 45.4 V42.4 Q38.9 41.1 40 41.1 Q41.1 41.1 41.1 42.4 V45.4" />
+        <path className="lab-burner__cap-band" d="M29.2 51.4 H50.8" />
+        <path className="lab-burner__cap-highlight" d="M33.4 41.4 V49.6" />
+        <path className="lab-burner__cap-knob" d="M37.2 38.6 V34.6 Q37.2 33 40 33 Q42.8 33 42.8 34.6 V38.6" />
       </g>
     </g>
   );
 }
 
 /*
- * 火柴：木梗斜靠 + 深红火柴头；划燃后火柴头上冒出三层小火苗。
+ * 火柴：木梗 φ1.6×42 + 深红火柴头；划燃后火柴头上冒出三层小火苗。
  * 火焰复用酒精灯的 lab-flame__outer / mid / core 造型与摇曳动画，
  * 只是缩到火柴头的尺度，视觉上同源、不用另写一套动画。
  */
@@ -130,32 +146,20 @@ function MatchGraphic(props) {
 
   return (
     <g className="lab-match">
-      <ellipse className="lab-match__shadow" cx="36" cy="90.4" rx="15" ry="2.2" />
+      <ellipse className="lab-match__shadow" cx="6" cy="52.6" rx="7" ry="1.6" />
 
       {/* 木梗：主料 + 一道高光 */}
-      <path className="lab-match__stick" d="M24 89.4 L47.4 32.6" />
-      <path className="lab-match__stick-shine" d="M25.8 87.6 L46.2 36.8" />
+      <path className="lab-match__stick" d="M5.2 52.4 L5.6 12 L6.4 12 L6.8 52.4 Z" />
+      <path className="lab-match__stick-shine" d="M5.9 50 V14.4" />
 
       {/* 火柴头 */}
-      <path
-        className="lab-match__head"
-        d="M50.6 27.8 Q54.2 31.6 51.4 35.6 Q47.6 36.4 46.4 32.6 Q46.6 28.6 50.6 27.8 Z"
-      />
+      <ellipse className="lab-match__head" cx="6" cy="9" rx="2.6" ry="4" />
 
       {burning ? (
         <g className="lab-flame lab-match__flame" aria-hidden="true">
-          <path
-            className="lab-flame__outer"
-            d="M49.6 28.4 C52.2 23.4 53.6 20.2 49.8 12.8 C45.8 20.2 47.6 23.4 49.6 28.4 Z"
-          />
-          <path
-            className="lab-flame__mid"
-            d="M49.6 27.6 C51 23.6 51.8 21.4 49.8 16.6 C47.8 21.4 48.6 23.6 49.6 27.6 Z"
-          />
-          <path
-            className="lab-flame__core"
-            d="M49.6 26.8 C50.4 24.4 50.8 22.8 49.8 20.4 C48.8 22.8 49 24.4 49.6 26.8 Z"
-          />
+          <path className="lab-flame__outer" d="M6 6.4 C8.4 2.6 9.2 0.4 6 -4 C2.8 0.4 3.6 2.6 6 6.4 Z" />
+          <path className="lab-flame__mid" d="M6 6 C7.4 3.2 7.8 1.6 6 -1.6 C4.2 1.6 4.6 3.2 6 6 Z" />
+          <path className="lab-flame__core" d="M6 5.6 C6.8 3.6 7 2.4 6 0.4 C5 2.4 5.2 3.6 6 5.6 Z" />
         </g>
       ) : null}
     </g>
@@ -163,29 +167,63 @@ function MatchGraphic(props) {
 }
 
 /*
- * 铁架台：底座 + 立杆 + 铁圈 + 固定螺丝。铁圈用来托石棉网，
- * 所以画成正面看过去的椭圆环，和石棉网的铁框呼应。
+ * 铁架台：200×560。底板 200×14、立杆 φ10（x 148~158）、铁圈外径 92 内径 80，
+ * 圈心 (98, 400) —— 台面上方 160mm，夹在圈里的试管正好落在酒精灯火焰上方。
+ * 铁圈画成正面看过去的椭圆环，和石棉网的铁框呼应；圈心同时是 store 的吸附点。
  */
-function StandGraphic() {
+function StandGraphic(props) {
+  var prefix = props.prefix;
+  var art = TOOLS.stand;
+
   return (
     <g className="lab-tool-drawing">
+      <defs>
+        {/* 立杆与底座的拉丝钢：左亮右暗，圆柱感 */}
+        <linearGradient id={prefix + '-steel'} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#e9edee" />
+          <stop offset="0.22" stopColor="#fbfcfc" />
+          <stop offset="0.58" stopColor="#d5dbdd" />
+          <stop offset="1" stopColor="#aeb9bd" />
+        </linearGradient>
+      </defs>
+
+      {/* 底座铸铁平台 */}
       <path
         className="lab-stand__base"
-        d="M16 95 H60 Q65 95 65 90.6 Q65 86 60 86 H16 Q11 86 11 90.6 Q11 95 16 95 Z"
+        d="M8 546 H192 Q200 546 200 552.6 V554 Q200 560 191 560 H9 Q0 560 0 554 V552.6 Q0 546 8 546 Z"
       />
-      <path d="M36 86 V16" />
-      <path className="lab-stand__cap" d="M33.2 16.6 H38.8" />
-      <path d="M40 36 H48" />
-      <ellipse className="lab-stand__ring" cx="53" cy="36" rx="10.5" ry="4.4" />
-      <path d="M40 46 H45" />
-      <circle className="lab-stand__screw" cx="45.6" cy="46" r="1.7" />
+      <path className="lab-stand__base-line" d="M4 550 H196" />
+
+      {/* 立杆 φ10 */}
+      <rect
+        x={art.rod.x - 5}
+        y={art.rod.top}
+        width={art.rod.width}
+        height={art.basePlate.y - art.rod.top}
+        rx="2"
+        fill={'url(#' + prefix + '-steel)'}
+      />
+      <path className="lab-stand__rod-spec" d={'M' + (art.rod.x - 3.4) + ' 18 V' + (art.basePlate.y - 4)} />
+
+      {/* 铁圈：外环 + 内环 + 支臂 + 固定螺丝 */}
+      <ellipse className="lab-stand__ring" cx={art.ring.x} cy={art.ring.y} rx={art.ring.rx} ry={art.ring.ry} />
+      <ellipse
+        className="lab-stand__ring-inner"
+        cx={art.ring.x}
+        cy={art.ring.y}
+        rx={art.ring.inner}
+        ry={art.ring.ry - 3.6}
+      />
+      <path className="lab-stand__arm" d={'M' + art.arm.x1 + ' ' + art.ring.y + ' H' + (art.rod.x - 5)} />
+      <circle className="lab-stand__screw" cx={art.rod.x - 2} cy={art.ring.y + 9} r="3.2" />
     </g>
   );
 }
 
 /*
- * 玻璃棒：一根两端磨圆的高硼硅玻璃杆，靠渐变做圆柱感（左侧高光、右缘偏暗），
- * 斜放在台面上；Step 3 的搅拌会把这根杆送进容器里并让它绕圈。
+ * 玻璃棒：φ6×236 的高硼硅玻璃杆，靠渐变做圆柱感（左侧高光、右缘偏暗）。
+ * 杆尖在 (5, 238)：搅拌时 CSS 就绕这一点旋转，杆子左右摇摆而尖端始终插在
+ * 液面下的同一个位置 —— 和真实搅棒「手腕在动、棒尖画圈」的手感一致。
  */
 function RodGraphic(props) {
   var prefix = props.prefix;
@@ -202,25 +240,23 @@ function RodGraphic(props) {
         </linearGradient>
       </defs>
 
-      <g transform="rotate(-16 40 56)">
-        {/* 杆身 */}
-        <rect
-          x="36.6"
-          y="14"
-          width="6.8"
-          height="78"
-          rx="3.4"
-          fill={'url(#' + prefix + '-rod)'}
-          stroke="rgba(0, 0, 0, 0.15)"
-          strokeWidth="1"
-        />
-        {/* 左缘长高光 + 右缘暗边，杆子才有圆柱的弧度 */}
-        <path className="lab-rod__spec" d="M38.5 18.5 V88" />
-        <path className="lab-rod__edge" d="M41.8 18.5 V88" />
-        {/* 两端磨圆的收口 */}
-        <path className="lab-rod__tip" d="M37.4 16.4 Q40 14.2 42.6 16.4" />
-        <path className="lab-rod__tip" d="M37.4 89.6 Q40 91.8 42.6 89.6" />
-      </g>
+      {/* 杆身 */}
+      <rect
+        x="2"
+        y="2"
+        width="6"
+        height="236"
+        rx="3"
+        fill={'url(#' + prefix + '-rod)'}
+        stroke="rgba(0, 0, 0, 0.15)"
+        strokeWidth="0.9"
+      />
+      {/* 左缘长高光 + 右缘暗边，杆子才有圆柱的弧度 */}
+      <path className="lab-rod__spec" d="M3.7 8 V232" />
+      <path className="lab-rod__edge" d="M6.4 8 V232" />
+      {/* 两端磨圆的收口 */}
+      <path className="lab-rod__tip" d="M3.4 4.6 Q5 2.6 6.6 4.6" />
+      <path className="lab-rod__tip" d="M3.4 235.4 Q5 237.4 6.6 235.4" />
     </g>
   );
 }
@@ -253,42 +289,43 @@ function DropperGraphic(props) {
       {/* 橡胶头：略扁的椭球，左上一条高光 */}
       <ellipse
         className="lab-dropper__bulb"
-        cx="40"
-        cy="17"
-        rx="8.4"
-        ry="9.6"
+        cx="12"
+        cy="16"
+        rx="9"
+        ry="15"
         fill={'url(#' + prefix + '-bulb)'}
       />
-      <path className="lab-dropper__bulb-spec" d="M34.8 12.2 Q35.4 8.8 38.6 8.2" />
+      <path className="lab-dropper__bulb-spec" d="M5.4 11.6 Q6.2 6.6 10 5.4" />
       {/* 胶头与玻璃管的收口 */}
-      <path className="lab-dropper__collar" d="M36.4 25.2 H43.6" />
+      <path className="lab-dropper__collar" d="M8.4 29.6 H15.6" />
       {/* 玻璃细管：直管收成一根很细的滴嘴 */}
       <path
         className="lab-dropper__tube"
-        d="M37.4 25.2 H42.6 V74.4 L41.2 84.4 Q40 87.2 38.8 84.4 L37.4 74.4 Z"
+        d="M9.6 29.6 H14.4 V88 L13.2 100 Q12 102.8 10.8 100 L9.6 88 Z"
         fill={'url(#' + prefix + '-tube)'}
       />
       {/* 管内液柱（吸了试剂才出现） */}
       {filled ? (
         <path
           className="lab-dropper__liquid"
-          d="M38.4 44 H41.6 V74 L40.9 81.4 Q40 82.6 39.1 81.4 L38.4 74 Z"
+          d="M10.4 46 H13.6 V87.6 L12.6 98 Q12 99.4 11.4 98 L10.4 87.6 Z"
         />
       ) : null}
-      <path className="lab-dropper__spec" d="M38.8 29 V73.6" />
-      <path className="lab-dropper__tip" d="M38.9 86.2 Q40 87.8 41.1 86.2" />
+      <path className="lab-dropper__spec" d="M10.8 33 V86" />
+      <path className="lab-dropper__tip" d="M11 101.4 Q12 102.8 13 101.4" />
     </g>
   );
 }
 
 /*
- * 石棉网：金属框 + 交叉网格 + 中间一块白色石棉垫。
+ * 石棉网：120×10 的金属框 + 交叉网格 + 中间一块白色石棉垫。
  * 架在燃着的火焰上时加 lab-gauze--hot：网格与垫子转暖色并透出一层光晕，
  * 一眼能看出「热量正从网面摊开」。
  */
 function GauzeGraphic(props) {
   var prefix = props.prefix;
   var hot = !!props.hot;
+  var pad = TOOLS['wire-gauze'].pad;
 
   return (
     <g className={'lab-gauze' + (hot ? ' lab-gauze--hot' : '')}>
@@ -299,53 +336,56 @@ function GauzeGraphic(props) {
           <stop offset="1" stopColor="#c5cfd2" />
         </linearGradient>
         <clipPath id={prefix + '-clip'}>
-          <rect x="16" y="48" width="48" height="20" rx="2.4" />
+          <rect x="0" y="0" width="120" height="10" rx="1.4" />
         </clipPath>
       </defs>
 
-      <ellipse className="lab-gauze__shadow" cx="40" cy="70.6" rx="25" ry="2.4" />
+      <ellipse className="lab-gauze__shadow" cx="60" cy="11.6" rx="56" ry="1.8" />
 
-      {hot ? <ellipse className="lab-gauze__glow" cx="40" cy="58" rx="20" ry="8" /> : null}
+      {hot ? <ellipse className="lab-gauze__glow" cx="60" cy="5" rx="40" ry="7" /> : null}
 
       <rect
         className="lab-gauze__frame"
-        x="15"
-        y="47"
-        width="50"
-        height="22"
-        rx="3"
+        x="0"
+        y="0"
+        width="120"
+        height="10"
+        rx="1.4"
         fill={'url(#' + prefix + '-frame)'}
       />
 
       <g className="lab-gauze__mesh" clipPath={'url(#' + prefix + '-clip)'}>
-        <path d="M10 46 L44 70" />
-        <path d="M20 45 L54 69" />
-        <path d="M30 45 L64 69" />
-        <path d="M40 45 L74 69" />
-        <path d="M50 45 L84 69" />
-        <path d="M30 45 L16 69" />
-        <path d="M40 45 L26 69" />
-        <path d="M50 45 L36 69" />
-        <path d="M60 45 L46 69" />
-        <path d="M70 45 L56 69" />
+        <path d="M-4 8 L14 0" />
+        <path d="M6 10 L24 0" />
+        <path d="M16 11 L34 0" />
+        <path d="M26 12 L44 0" />
+        <path d="M36 12 L54 0" />
+        <path d="M46 12 L64 0" />
+        <path d="M56 12 L74 0" />
+        <path d="M66 12 L84 0" />
+        <path d="M76 12 L94 0" />
+        <path d="M86 12 L104 0" />
+        <path d="M96 12 L114 0" />
+        <path d="M106 10 L124 0" />
+        <path d="M116 8 L130 1" />
       </g>
 
       {/* 石棉垫：白色圆片，受热时透出暖色 */}
-      <ellipse className="lab-gauze__pad" cx="40" cy="57.6" rx="11.6" ry="5.6" />
-      <path className="lab-gauze__edge" d="M17.6 48.6 H62.4" />
+      <ellipse className="lab-gauze__pad" cx={pad.cx} cy={pad.cy} rx={pad.rx} ry={pad.ry} />
+      <path className="lab-gauze__edge" d="M2.4 1.6 H117.6" />
     </g>
   );
 }
 
+/* pH 试纸：8×50 的纸条，压着五道比色刻度。 */
 function PaperGraphic() {
   return (
     <g className="lab-tool-drawing">
-      <path d="M30 20 H50 V86 H30 Z" />
-      <path d="M30 34 H50" />
-      <path d="M30 44 H50" />
-      <path d="M30 54 H50" />
-      <path d="M30 64 H50" />
-      <path d="M30 74 H50" />
+      <path d="M2 2 H14 V52 H2 Z" />
+      <path d="M2 12 H14" />
+      <path d="M2 22 H14" />
+      <path d="M2 32 H14" />
+      <path d="M2 42 H14" />
     </g>
   );
 }
@@ -355,13 +395,19 @@ function ToolGraphic(props) {
   var type = item.type;
   /* 拖拽幽灵会和台上的原件同时存在，用 suffix 让人造 id 不重复 */
   var prefix = 'lab-' + item.id + (props.suffix || '');
+  var art = TOOLS[type] || { size: { width: 80, height: 104 } };
 
   return (
-    <svg className="lab-vessel__svg" viewBox="0 0 80 104" aria-hidden="true" focusable="false">
+    <svg
+      className="lab-vessel__svg"
+      viewBox={'0 0 ' + art.size.width + ' ' + art.size.height}
+      aria-hidden="true"
+      focusable="false"
+    >
       {type === 'burner' ? (
         <BurnerGraphic lit={!!item.lit} inUse={!!item.inUse} prefix={prefix} />
       ) : null}
-      {type === 'stand' ? <StandGraphic /> : null}
+      {type === 'stand' ? <StandGraphic prefix={prefix} /> : null}
       {type === 'match' ? <MatchGraphic burning={!!item.lit} /> : null}
       {type === 'rod' ? <RodGraphic prefix={prefix} /> : null}
       {type === 'dropper' ? <DropperGraphic prefix={prefix} filled={!!item.dropperFill} /> : null}
@@ -383,3 +429,4 @@ export function LabGraphic(props) {
   }
   return <ToolGraphic item={props.item} suffix={props.suffix} />;
 }
+

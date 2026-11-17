@@ -1071,7 +1071,7 @@
   grid-template-areas:
     "library bench"
     "console console";
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: 268px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) 158px;
   min-height: 0;
   border-top: 1px solid var(--border);
@@ -1185,31 +1185,55 @@
 }
 
 .lab-group__items {
-  padding: 0.12rem 0 0.35rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0.15rem 0.6rem 0.55rem;
 }
 
+/* 器材格：线稿图标在上、名称与规格在下，两列网格。整格可拖可点。 */
 .lab-item {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.6rem;
-  padding: 0.32rem 0.85rem 0.32rem 1.35rem;
-  border-top: 1px solid #f4f4f2;
-  font-size: 0.76rem;
-  line-height: 1.55;
-}
-
-.lab-item:first-child {
-  border-top-color: var(--border);
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.42rem 0.3rem 0.38rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: #ffffff;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  text-align: center;
+  transition: border-color var(--transition), background-color var(--transition),
+    color var(--transition);
 }
 
 .lab-item:hover {
-  background: var(--surface-2);
+  border-color: var(--accent-rule);
+  background: #fbfcfa;
+}
+
+.lab-item__icon {
+  display: block;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 0.1rem;
+  color: #a9b8bd;
+  transition: color var(--transition);
+}
+
+.lab-item:hover .lab-item__icon {
+  color: var(--accent);
+}
+
+.lab-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .lab-item__name {
-  flex: 1 1 auto;
-  min-width: 0;
+  max-width: 100%;
   color: var(--text-2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1221,16 +1245,18 @@
   align-self: center;
   width: 8px;
   height: 8px;
-  margin-right: -0.3rem;
   border: 1px solid rgba(17, 24, 39, 0.16);
   border-radius: 1px;
 }
 
 .lab-item__formula {
-  flex: none;
+  max-width: 100%;
   color: var(--muted-2);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 0.56rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .lab-item--drag {
@@ -1281,6 +1307,25 @@
   background-color: #fbfbf8;
 }
 
+/*
+ * Canvas 引擎（Konva）：点阵网格、台面线、毫米标尺都由 Stage 自己画，
+ * HTML 背景图与 .lab-bench__desk 让位；宿主 div 铺满画布区，
+ * Stage 的像素宽高由 ResizeObserver 量出来后传给 Konva。
+ */
+.lab-bench__canvas--konva {
+  display: block;
+  background-image: none;
+}
+
+.lab-canvas-host {
+  position: absolute;
+  inset: 0;
+}
+
+.lab-canvas-host canvas {
+  display: block;
+}
+
 .lab-bench__empty {
   margin: 0;
   color: var(--muted-2);
@@ -1292,16 +1337,59 @@
 
 /* ---------- 实验台上的器材 ---------- */
 
+/*
+ * 台面线：画布底边留出标签的位置后的一条基准线，所有器材的器底 / 底座都压在
+ * 这条线上（store 的 settleY 负责算 y）。它只是视觉参照，不接收指针事件。
+ */
+.lab-bench__desk {
+  position: absolute;
+  right: 0;
+  bottom: 58px;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(203, 213, 225, 0) 0%,
+    rgba(203, 213, 225, 0.9) 6%,
+    rgba(203, 213, 225, 0.9) 94%,
+    rgba(203, 213, 225, 0) 100%
+  );
+  pointer-events: none;
+}
+
+.lab-bench__desk-label {
+  position: absolute;
+  right: 10px;
+  bottom: 4px;
+  color: var(--muted-2);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+}
+
 .lab-vessel {
   position: absolute;
   z-index: 1;
-  width: 104px;
-  padding: 2px 0 4px;
+  /* 宽高由页面按真实毫米尺寸写在内联样式里（烧杯 78×100、铁架台 200×560） */
   color: var(--text-2);
   cursor: grab;
   text-align: center;
   touch-action: none;
   user-select: none;
+}
+
+/* 选中框：贴着器材真实外框的一圈浅蓝实线，取消选中即消失 */
+.lab-vessel--selected {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lab-vessel--selected::before {
+  position: absolute;
+  inset: -2px;
+  border: 1px dashed rgba(79, 139, 200, 0.35);
+  content: '';
+  pointer-events: none;
 }
 
 .lab-vessel:hover {
@@ -1312,36 +1400,34 @@
   cursor: grabbing;
 }
 
-.lab-vessel--selected {
-  outline: 1px solid var(--accent);
-  outline-offset: 1px;
-}
-
 .lab-vessel--selected .lab-vessel__name {
   color: var(--accent);
 }
 
 .lab-vessel--over {
   outline: 1px dashed var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 /*
- * 悬停对准：容器被拖到目标瓶口正上方、X 轴对齐时，目标容器套一圈虚线口沿 +
+ * 悬停对准：容器被拖到目标瓶口正上方、X 轴对齐时，目标容器套一圈虚线外框 +
  * 瓶口脉动光圈，提示「松手就倒进去」。判定来源与松手结算同为 pourAlign。
+ * 光圈的位置 / 宽度直接取页面算好的瓶口坐标（--lab-mouth-y / --lab-mouth-w），
+ * 所以烧杯的宽口、试管的窄口都套得准。
  */
 .lab-vessel--pour-ready {
   outline: 1px dashed rgba(79, 139, 200, 0.55);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .lab-vessel--pour-ready::after {
   position: absolute;
-  top: 22px;
+  top: var(--lab-mouth-y, 14px);
   left: 50%;
-  width: 44px;
+  width: var(--lab-mouth-w, 44px);
   height: 12px;
-  margin-left: -22px;
+  margin-top: -6px;
+  margin-left: calc(var(--lab-mouth-w, 44px) / -2);
   border: 1px dashed var(--accent);
   border-radius: 50%;
   content: '';
@@ -1374,8 +1460,6 @@
 /* 跟手的拖拽幽灵：渲染在 DragOverlay 里，不会被画布的 overflow 裁掉 */
 .lab-drag-ghost {
   position: relative;
-  width: 104px;
-  padding: 2px 0 4px;
   color: var(--text-2);
   cursor: grabbing;
   text-align: center;
@@ -1389,9 +1473,8 @@
 
 .lab-vessel__svg {
   display: block;
-  width: 92px;
-  height: 120px;
-  margin: 0 auto;
+  width: 100%;
+  height: 100%;
   overflow: visible;
   /* 白底玻璃：浅灰描边 + 白色高光，靠明暗而不是深色线条勾形 */
   color: #c3ced2;
@@ -1528,7 +1611,7 @@
   fill: rgba(17, 24, 39, 0.52);
   stroke: none;
   font-family: var(--font-mono);
-  font-size: 2.9px;
+  font-size: 3.2px;
   letter-spacing: 0.1px;
 }
 
@@ -1598,7 +1681,7 @@
 
 .lab-stopper {
   transform-box: view-box;
-  transform-origin: 40px 18px;
+  transform-origin: 31px 18px;
   transition: transform 320ms cubic-bezier(0.3, 0.8, 0.3, 1);
 }
 
@@ -1847,6 +1930,147 @@
   }
 }
 
+/* ---------- 搅拌：玻璃棒 + 涡流 ---------- */
+
+/*
+ * 玻璃棒插进液面后小幅摇摆：绕杆子上端转 ±7°，杆尖在液体里划圈。
+ * 搅拌中藏起「玻璃棒 / 搅拌中」两行文字，棒子悬在杯口上也不会挡住读数。
+ */
+.lab-vessel--stirring-rod .lab-vessel__name,
+.lab-vessel--stirring-rod .lab-vessel__sub {
+  opacity: 0;
+}
+
+.lab-vessel--stirring-rod .lab-vessel__svg {
+  /* 绕杆尖 (5,238) 旋转：杆子斜插进液体，手腕怎么摆杆尖都不离开搅拌点 */
+  transform-origin: 50% 99.2%;
+  animation: lab-rod-rock 1.45s ease-in-out infinite alternate;
+}
+
+@keyframes lab-rod-rock {
+  from {
+    transform: rotate(-16deg);
+  }
+  to {
+    transform: rotate(-6deg);
+  }
+}
+
+/* 振荡：整只容器左右快速小幅摇晃（1.2s 后由 store 自动收手） */
+.lab-vessel--shaking .lab-vessel__svg {
+  animation: lab-vessel-shake 0.26s ease-in-out 4;
+}
+
+@keyframes lab-vessel-shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-1.5px) rotate(-1.6deg);
+  }
+  75% {
+    transform: translateX(1.5px) rotate(1.6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-vessel--shaking .lab-vessel__svg {
+    animation: none;
+  }
+}
+
+/* 涡心凹面：液面中间被搅低的一块，带一点冷色，和四周液面分开 */
+.lab-swirl__dip {
+  fill: rgba(18, 38, 52, 0.16);
+  pointer-events: none;
+}
+
+/* 打旋的三圈亮弧：整组匀速转，弧本身呼吸明暗 */
+.lab-swirl__arc {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.78);
+  stroke-width: 0.85;
+  opacity: 0.6;
+  animation: lab-swirl-fade 1.2s ease-in-out infinite;
+}
+
+.lab-swirl__spin {
+  transform-box: fill-box;
+  transform-origin: 50% 30%;
+  animation: lab-swirl-spin 1.9s linear infinite;
+}
+
+@keyframes lab-swirl-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes lab-swirl-fade {
+  0%,
+  100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.86;
+  }
+}
+
+/* 搅拌时液面不再是慢慢漂移：横向往复更快，像被棒子带着走 */
+.lab-vessel--stirring .lab-liquid__wave {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lab-liquid-stir 0.95s linear infinite;
+}
+
+@keyframes lab-liquid-stir {
+  0% {
+    transform: translate(-2.4px, 0.4px);
+  }
+  50% {
+    transform: translate(2.4px, -1.2px);
+  }
+  100% {
+    transform: translate(-2.4px, 0.4px);
+  }
+}
+
+/* 沉淀被卷起来：整组左右打旋并抬离杯底，不再安静地堆着 */
+.lab-solid-group--swirl {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: lab-solid-swirl 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes lab-solid-swirl {
+  from {
+    opacity: 0.55;
+    transform: translate(-1.4px, -1px) skewX(-7deg);
+  }
+  to {
+    opacity: 0.82;
+    transform: translate(1.4px, -3px) skewX(7deg);
+  }
+}
+
+.lab-vessel--stirring .lab-vessel__sub {
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-vessel--stirring-rod .lab-vessel__svg,
+  .lab-swirl__arc,
+  .lab-swirl__spin,
+  .lab-vessel--stirring .lab-liquid__wave,
+  .lab-solid-group--swirl {
+    animation: none;
+  }
+}
+
 /* ---------- 浑浊：沉淀把液体变浑 ---------- */
 
 /*
@@ -1928,6 +2152,16 @@
   pointer-events: none;
 }
 
+/*
+ * 水柱实体：上宽下窄的一条液柱，半透明压在亮芯下面 —— 有体积感，
+ * 而不是一根等宽的虚线。颜色由页面按源液体填，这里只管明暗。
+ */
+.lab-pour__body {
+  stroke: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+}
+
 .lab-pour__stream {
   fill: none;
   stroke-linecap: round;
@@ -1944,6 +2178,29 @@
   stroke-width: 1;
   stroke-dasharray: 2 10;
   animation: lab-pour-flow 0.42s linear infinite;
+}
+
+/* 落点水花：液流砸进目标液面时向外摊开的一圈，越溅越淡 */
+.lab-pour__splash {
+  opacity: 0.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lab-pour-splash 0.62s ease-out infinite;
+}
+
+@keyframes lab-pour-splash {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.6, 0.8);
+  }
+  70% {
+    opacity: 0.18;
+    transform: scale(1.15, 1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3, 1.2);
+  }
 }
 
 .lab-pour__drop {
@@ -1979,7 +2236,8 @@
 @media (prefers-reduced-motion: reduce) {
   .lab-pour__stream,
   .lab-pour__glint,
-  .lab-pour__drop {
+  .lab-pour__drop,
+  .lab-pour__splash {
     animation: none;
   }
 }
@@ -2449,27 +2707,43 @@
   stroke-width: 0.9;
 }
 
+/*
+ * 器材标签：绝对定位在实体盒子下方，不参与命中、也不改变实体尺寸。
+ * 一行为名称（最多 140px），一行为读数（体积 / 温度 / 状态）。
+ */
 .lab-vessel__name {
-  display: block;
-  margin-top: 2px;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: max-content;
+  max-width: 150px;
+  margin-top: 3px;
   overflow: hidden;
   color: currentColor;
   font-family: var(--font);
   font-size: 0.72rem;
   line-height: 1.3;
   text-overflow: ellipsis;
+  transform: translateX(-50%);
   white-space: nowrap;
+  pointer-events: none;
 }
 
 .lab-vessel__sub {
-  display: block;
+  position: absolute;
+  top: calc(100% + 16px);
+  left: 50%;
+  width: max-content;
+  max-width: 170px;
   overflow: hidden;
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 0.58rem;
   line-height: 1.4;
   text-overflow: ellipsis;
+  transform: translateX(-50%);
   white-space: nowrap;
+  pointer-events: none;
 }
 
 .lab-drag-preview {
@@ -2491,110 +2765,177 @@
   font-size: 0.62rem;
 }
 
-/* ---------- 选中操作条 ---------- */
+/* ---------- 属性面板：选中器材后浮在画布右上角 ---------- */
 
-.lab-bench__actions {
-  position: relative;
+.lab-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
   display: flex;
-  flex: none;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.3rem 0.8rem;
-  min-height: 40px;
-  padding: 0.3rem 0.75rem;
-  border-top: 1px solid var(--border-strong);
-  background: #f7f7f5;
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
-}
-
-.lab-actions__status {
-  display: flex;
-  min-width: 0;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.2rem 0.75rem;
-}
-
-.lab-actions__name {
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 0.76rem;
-  font-weight: 600;
-}
-
-.lab-actions__line,
-.lab-actions__contents {
-  color: var(--muted);
-}
-
-.lab-actions__contents {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.lab-actions__phenomenon {
-  min-width: 0;
-  color: var(--accent);
-  overflow-wrap: anywhere;
-}
-
-/* 受热方式：直接受热偏暖色提示，垫石棉网时显示「均匀受热」 */
-.lab-actions__heat {
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 234px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  padding: 0.55rem 0.6rem 0.6rem;
   border: 1px solid var(--border-strong);
   border-radius: 2px;
-  padding: 0 0.35rem;
+  background: rgba(255, 255, 255, 0.96);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-width: thin;
+}
+
+/* 没有选中对象时只剩一张虚线提示卡，位置不跳 */
+.lab-panel--empty {
+  align-items: center;
+  justify-content: center;
+  width: 190px;
+  padding: 0.85rem 0.7rem;
+  border-style: dashed;
+  background: rgba(252, 252, 250, 0.72);
+  color: var(--muted-2);
+  text-align: center;
+  pointer-events: none;
+}
+
+.lab-panel__hint {
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+.lab-panel__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.lab-panel__title {
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lab-panel__type {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--muted-2);
+  font-size: 0.56rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lab-panel__close {
+  flex: none;
+  padding: 0 0.1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted-2);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.lab-panel__close:hover {
+  color: var(--text);
+}
+
+/* 参数输入：名称 / 浓度，回车或失焦提交 */
+.lab-panel__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.lab-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lab-field__label {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+.lab-field__input {
+  width: 104px;
+  padding: 0.12rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: #ffffff;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-align: right;
+}
+
+.lab-field__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.lab-panel__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  padding: 0.1rem 0 0.2rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.lab-panel__line {
+  color: var(--text-2);
+}
+
+.lab-panel__contents,
+.lab-panel__phenomenon {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lab-panel__phenomenon {
+  color: var(--accent);
+}
+
+/* 受热方式：直接受热偏暖色提示，垫石棉网 / 搅拌时显示「均匀受热」 */
+.lab-panel__heat {
+  align-self: flex-start;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  padding: 0 0.3rem;
   color: var(--muted);
 }
 
-.lab-actions__heat--even {
+.lab-panel__heat--even {
   border-color: rgba(201, 138, 78, 0.5);
   background: rgba(240, 176, 100, 0.14);
   color: #8d5327;
 }
 
-.lab-actions__heat--uneven {
+.lab-panel__heat--uneven {
   border-color: rgba(156, 74, 36, 0.45);
   color: #9c4a24;
 }
 
-/* Status 读数：带塞容器可点，Open / Closed 直接切换瓶塞 */
-.lab-actions__state {
-  border: 1px solid var(--border-strong);
-  border-radius: 0;
-  padding: 0 0.35rem;
-  background: transparent;
-  color: var(--muted);
-  cursor: default;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: 1.6;
-}
-
-button.lab-actions__state {
-  cursor: pointer;
-  transition: color var(--transition), border-color var(--transition);
-}
-
-button.lab-actions__state:hover {
-  color: var(--text);
-}
-
-.lab-actions__state--open {
-  border-color: rgba(79, 139, 200, 0.45);
-  color: #3f6f9b;
-}
-
-.lab-actions__state--closed {
-  border-color: rgba(156, 74, 36, 0.4);
-  color: #9c4a24;
-}
-
-.lab-actions__buttons {
+.lab-panel__actions {
   display: flex;
-  flex: none;
-  gap: 0.3rem;
-  margin-left: auto;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
 }
 
 .lab-action {
@@ -2629,32 +2970,19 @@ button.lab-actions__state:hover {
   color: var(--text);
 }
 
-.lab-reagent-picker {
-  position: absolute;
-  right: 0;
-  bottom: 100%;
-  left: 0;
-  z-index: 4;
+.lab-panel__picker {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.25rem 0.55rem;
-  max-height: 42vh;
+  gap: 0.2rem 0.55rem;
+  max-height: 28vh;
   overflow-y: auto;
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--border-strong);
-  border-bottom: 0;
-  background: #fcfcfa;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--border);
 }
 
-.lab-reagent-picker__label {
-  color: var(--muted-2);
-  font-size: 0.6rem;
-  letter-spacing: 0.06em;
-}
-
-.lab-reagent-picker__item {
-  padding: 0.08rem 0.05rem;
+.lab-panel__reagent {
+  padding: 0.06rem 0.02rem;
   border: 0;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
@@ -2662,10 +2990,10 @@ button.lab-actions__state:hover {
   color: var(--text-2);
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 0.64rem;
+  font-size: 0.62rem;
 }
 
-.lab-reagent-picker__item:hover {
+.lab-panel__reagent:hover {
   border-bottom-color: var(--accent);
   color: var(--accent);
 }
@@ -2769,7 +3097,7 @@ button.lab-actions__state:hover {
 
 @media (max-width: 980px) {
   .lab-shell {
-    grid-template-columns: 218px minmax(0, 1fr);
+    grid-template-columns: 236px minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) 150px;
   }
 
@@ -2842,23 +3170,26 @@ button.lab-actions__state:hover {
     max-width: 148px;
   }
 
-  .lab-bench__actions {
-    padding: 0.3rem 0.5rem;
-    font-size: 0.6rem;
+  /* 窄屏：属性面板贴底铺开，不再浮在右上角挡住器材 */
+  .lab-panel {
+    top: auto;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: auto;
+    max-height: 46%;
   }
 
-  .lab-actions__buttons {
-    width: 100%;
-    margin-left: 0;
+  .lab-panel--empty {
+    right: 8px;
+    left: 8px;
+    width: auto;
   }
 
-  .lab-actions__contents {
-    flex-basis: 100%;
+  .lab-field__input {
+    width: 40%;
   }
-
-  .lab-reagent-picker {
-    padding: 0.35rem 0.5rem;
-  }
+}
 
   .lab-console__bar {
     padding-inline: 0.7rem;

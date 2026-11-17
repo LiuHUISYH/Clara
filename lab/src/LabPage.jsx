@@ -11,12 +11,23 @@ import {
   useSensors
 } from '@dnd-kit/core';
 import { LAB_LIBRARY, LAB_ITEM_COUNT, LAB_REAGENTS } from './library';
-import { useLabStore, LAB_GEOMETRY, clampPoint, pourAlign, mouthPoint } from './store';
+import { LibraryIcon } from './icons';
+import {
+  useLabStore,
+  LAB_GEOMETRY,
+  basePoint,
+  clampPoint,
+  dimensionsOf,
+  pourAlign,
+  mouthPoint,
+  settleY
+} from './store';
 import { LabGraphic } from './Vessel';
+import KonvaBench from './canvas/KonvaBench';
+import { LAB_ENGINE } from './engine';
+import { containerAt } from './canvas/geometry';
 
-/* 令牌外框直接取 store 的实体尺寸，页面与碰撞判定不会各说各话。 */
-var TOKEN_WIDTH = LAB_GEOMETRY.itemWidth;
-var TOKEN_HEIGHT = LAB_GEOMETRY.itemHeight;
+/* 实体尺寸随器型走（烧杯 78×100、试管 20×152、铁架台 200×560），页面不再有统一令牌。 */
 var TARGET_PREFIX = 'target:';
 
 /*
@@ -25,11 +36,47 @@ var TARGET_PREFIX = 'target:';
  * pourAlign（瓶口 X 中心对齐 + 上下叠住）。不读 DOM 尺寸，页面缩放也不会跑偏。
  */
 
-/* 拖拽中的令牌左上角 → 画布坐标（画布本身也是一个 droppable，能拿到它的矩形）。 */
+/*
+ * 指针在器材内的落点偏移（拖拽开始时记下，单位 px）。
+ * 松手瞬间的器材位置以「指针 + 这个偏移」换算：active.rect 的 translated 晚一帧，
+ * 快速拖动时能差出一整步（几十像素），倒液对准就会误判成「瓶口没对上」。
+ */
+var grabOffset = { x: 40, y: 56 };
+
+/* 画布 droppable 的真实 DOM 节点（args.droppableContainers 是数组，不是 Map）。 */
+function benchNode(args) {
+  var list = args.droppableContainers || [];
+
+  for (var i = 0; i < list.length; i += 1) {
+    if (list[i].id !== 'bench') continue;
+    var node = list[i].node && list[i].node.current;
+    if (node) return node;
+  }
+
+  return null;
+}
+
+/* 拖拽中的令牌左上角 → 画布坐标（画布本身也是一个 droppable，能拿到它的节点）。 */
 function dragOrigin(args) {
-  var translated = args.active.rect.current && args.active.rect.current.translated;
-  var bench = args.droppableRects.get('bench');
-  if (!translated || !bench) return null;
+  var rects = args.active.rect.current;
+  var translated = rects && rects.translated;
+
+  /*
+   * 画布矩形优先取 droppable 的真实 DOM 节点：droppableRects 里的是测量缓存，
+   * 窗口滚动 / 布局微调后可能和 DOM 差几十像素，倒液对准就会算歪。
+   */
+  var node = benchNode(args);
+  var bench = node ? node.getBoundingClientRect() : args.droppableRects.get('bench');
+  if (!bench) return null;
+
+  if (args.pointerCoordinates) {
+    return {
+      x: args.pointerCoordinates.x - grabOffset.x - bench.left,
+      y: args.pointerCoordinates.y - grabOffset.y - bench.top
+    };
+  }
+
+  if (!translated) return null;
 
   return { x: translated.left - bench.left, y: translated.top - bench.top };
 }
@@ -65,6 +112,12 @@ function labCollisionDetection(args) {
       continue;
     }
 
+    /*
+     * 被拖的器材自己也是一个落点（幽灵跟着指针走，常常正好压在目标上），
+     * 必须先排除，否则松手时可能把自己当成落点 —— 倒液、落棒都会白做。
+     */
+    if (dragged && String(hits[i].id).slice(TARGET_PREFIX.length) === dragged.id) continue;
+
     var targetItem = benchItemById(String(hits[i].id).slice(TARGET_PREFIX.length));
     if (!targetItem) continue;
 
@@ -79,6 +132,11 @@ function labCollisionDetection(args) {
 
     /* 铁架台也是落点：容器松手在台上就夹进铁圈（见 clampOnStand）。 */
     if (data && data.item && data.item.kind === 'container' && targetItem.type === 'stand') {
+      return [hits[i]];
+    }
+
+    /* 玻璃棒放到容器上：直接开始搅拌（见 stir），不走倒液对准判定。 */
+    if (data && data.item && data.item.type === 'rod' && targetItem.kind === 'container') {
       return [hits[i]];
     }
 
@@ -106,6 +164,7 @@ function itemSubText(item) {
     if (item.type === 'wire-gauze') {
       return item.hot ? '匀热中' : '未受热';
     }
+    if (item.type === 'rod' && item.stirring) return '搅拌中';
     return item.type === 'burner' ? (item.lit ? '燃烧中' : '未点燃') : '工具';
   }
 
@@ -125,6 +184,7 @@ function itemSubText(item) {
     (item.clamp ? '铁夹上 · ' : '') +
     (item.temperature !== 25 ? item.temperature + '°C · ' : '') +
     (item.boiling ? '沸腾 · ' : '') +
+    (item.stirring ? '搅拌中 · ' : '') +
     body
   );
 }
@@ -155,25 +215,63 @@ function toolStatus(item, matchBurning) {
 }
 
 /*
- * 落点换算：把拖拽中令牌的实时矩形对回画布坐标。
+ * 落点换算：把拖拽中器材的实时矩形对回画布坐标。
  * 直接取左上角（而不是中心）能让器材落在幽灵停下的位置，配合实测宽高做
- * 边界钳制，避免文字行把器材顶出画布底部。
+ * 边界钳制，避免器材被拖出画布；落台面 / 石棉网 / 火焰的纵向吸附由 settleY 完成。
  */
-function dragPoint(canvas, event) {
-  if (!canvas) return { x: 24, y: 24 };
+function dragPoint(canvas, event, type) {
+  var size = dimensionsOf(type);
+  if (!canvas) return { x: 24, y: Math.max(4, 320 - size.height) };
 
   var rect = canvas.getBoundingClientRect();
   var translated = event.active.rect.current && event.active.rect.current.translated;
-  if (!translated) return { x: 24, y: 24 };
+  if (!translated) return { x: 24, y: Math.max(4, 320 - size.height) };
 
-  var width = translated.width || TOKEN_WIDTH;
-  var height = translated.height || TOKEN_HEIGHT;
+  var width = translated.width || size.width;
+  var height = translated.height || size.height;
   var maxX = Math.max(4, rect.width - width - 4);
   var maxY = Math.max(4, rect.height - height - 4);
 
   return {
     x: Math.round(Math.max(4, Math.min(maxX, translated.left - rect.left))),
-    y: Math.round(Math.max(4, Math.min(maxY, translated.top - rect.top)))
+    y: Math.round(Math.max(0, Math.min(maxY, translated.top - rect.top)))
+  };
+}
+
+/*
+ * 松手落位：先按画布边界钳制，再交给 settleY 决定纵向落点
+ * （铁圈 / 石棉网 / 火焰 / 台面线），保证器材不会停在半空。
+ */
+function landedPoint(canvas, event, type) {
+  var raw = dragPoint(canvas, event, type);
+  var height = canvas ? canvas.getBoundingClientRect().height : 520;
+  var items = useLabStore.getState().items;
+
+  return {
+    x: raw.x,
+    y: settleY(type, raw.x, raw.y, height, items)
+  };
+}
+
+/* 把拖拽开始时指针在令牌里的位置记下来（松手位置的换算要用同一个偏移）。 */
+function recordGrabOffset(event) {
+  var activator = event.activatorEvent;
+  var rects = event.active.rect.current;
+  var initial = rects && rects.initial;
+
+  if (
+    activator &&
+    initial &&
+    typeof activator.clientX === 'number' &&
+    typeof activator.clientY === 'number'
+  ) {
+    grabOffset = { x: activator.clientX - initial.left, y: activator.clientY - initial.top };
+    return;
+  }
+
+  grabOffset = {
+    x: initial && initial.width ? initial.width / 2 : 40,
+    y: initial && initial.height ? initial.height / 2 : 56
   };
 }
 
@@ -197,19 +295,21 @@ function benchItemById(id) {
  * 用距离而不是「指针正压在铁架台上」，拖到铁架台旁边也能吸上去，和真实
  * 摆器材的手感一致。
  */
-function nearestStand(point) {
+function nearestStand(item, point) {
   var items = useLabStore.getState().items;
-  var base = {
-    x: point.x + TOKEN_WIDTH / 2,
-    y: point.y + LAB_GEOMETRY.vesselBaseY
-  };
+  var box = item.dimensions || dimensionsOf(item.type);
+  var base = basePoint(Object.assign({}, item, { x: point.x, y: point.y }));
+  var centre = { x: point.x + box.width / 2, y: point.y + box.height / 2 };
   var best = null;
   var bestDistance = LAB_GEOMETRY.clampRadius;
 
   items.forEach(function (entry) {
     if (entry.type !== 'stand') return;
     var ring = clampPoint(entry);
-    var distance = Math.sqrt(Math.pow(ring.x - base.x, 2) + Math.pow(ring.y - base.y, 2));
+    /* 器底中心与实体中心都算：提着试管中部往圈里放，和拎着底往上凑都能吸住 */
+    var toBase = Math.sqrt(Math.pow(ring.x - base.x, 2) + Math.pow(ring.y - base.y, 2));
+    var toCentre = Math.sqrt(Math.pow(ring.x - centre.x, 2) + Math.pow(ring.y - centre.y, 2));
+    var distance = Math.min(toBase, toCentre);
     if (distance <= bestDistance) {
       best = entry;
       bestDistance = distance;
@@ -221,6 +321,10 @@ function nearestStand(point) {
 
 /* ============================ 左侧：器材库 ============================ */
 
+/*
+ * 器材库里的一格：极简线稿图标 + 名称 + 规格。整格可拖、可点。
+ * 图标颜色来自 speciesColor（液体会显示自己的颜色），一眼能认出是哪一种试剂。
+ */
 function LibraryItem(props) {
   var item = props.item;
   var drag = useDraggable({
@@ -234,7 +338,11 @@ function LibraryItem(props) {
       : item.formula
     : item.capacity
       ? item.capacity + 'mL'
-      : '';
+      : item.state === 'solid'
+        ? '固体'
+        : item.kind === 'tool'
+          ? '工具'
+          : '';
 
   return (
     <li
@@ -248,9 +356,9 @@ function LibraryItem(props) {
         props.onPick(item);
       }}
     >
-      {item.swatch ? (
-        <span className="lab-item__swatch" style={{ background: item.swatch }} aria-hidden="true" />
-      ) : null}
+      <span className="lab-item__icon" aria-hidden="true">
+        <LibraryIcon item={item} />
+      </span>
       <span className="lab-item__name">{item.name}</span>
       {tail ? <span className="lab-item__formula">{tail}</span> : null}
     </li>
@@ -363,6 +471,11 @@ function BenchItem(props) {
   if (item.type === 'wire-gauze' && item.hot) className += ' lab-vessel--gauze-hot';
   if (item.heating) className += ' lab-vessel--heating';
   if (item.boiling) className += ' lab-vessel--boiling';
+  if (item.shaking) className += ' lab-vessel--shaking';
+  /* 搅拌中的容器：液面涡流；插进液里的玻璃棒：小幅摇摆、隐藏文字。 */
+  if (item.stirring) {
+    className += item.type === 'rod' ? ' lab-vessel--stirring-rod' : ' lab-vessel--stirring';
+  }
   if (item.clamp) className += ' lab-vessel--clamped';
   if (props.pourReady) className += ' lab-vessel--pour-ready';
   if (pouring && props.pourTarget) {
@@ -370,11 +483,26 @@ function BenchItem(props) {
       ' lab-vessel--pouring' + (props.pourTarget.x < item.x ? ' lab-vessel--pour-left' : '');
   }
 
+  /*
+   * 实体的盒子就是它的真实尺寸：玻璃底、瓶口都与 store 的几何一一对应。
+   * 下面两行文字绝对定位在盒子下方，不参与命中与碰撞（工具再高也不会把标签顶飞）。
+   * --lab-mouth-y / --lab-mouth-w 给「松手就倒进去」的瓶口提示圈用。
+   */
+  var box = item.dimensions || dimensionsOf(item.type);
+  var mouth = mouthPoint(item);
+
   return (
     <div
       ref={setNode}
       className={className}
-      style={{ left: item.x, top: item.y }}
+      style={{
+        left: item.x,
+        top: item.y,
+        width: box.width,
+        height: box.height,
+        '--lab-mouth-y': Math.round(mouth.y - item.y) + 'px',
+        '--lab-mouth-w': Math.round(box.width * 0.58) + 'px'
+      }}
       data-item-id={item.id}
       {...drag.attributes}
       {...drag.listeners}
@@ -407,11 +535,52 @@ function BenchItem(props) {
 }
 
 /*
- * 倒液水柱：在两个容器的瓶口之间画一条流动的虚线，颜色与线宽都取源液体。
+ * 倒液水柱：在两个容器的瓶口之间画一条流动的液柱，颜色与粗细都取源液体。
  * 纯视觉层 —— 进度、体积都由 store 的 pourFlow 驱动，动画结束后才结算。
  * 起点 / 落点来自 store 的 mouthPoint（瓶口中心），源容器倾斜 38° 后瓶口甩向
  * 目标一侧，所以起点再往倾倒方向偏移半指宽，水柱从唇边落到目标瓶口里。
+ *
+ * 水柱分三层画：先是上宽下窄的实体（lab-pour__body，自由下落的液流会被拉细），
+ * 再压一条亮芯（lab-pour__stream，颜色最深），最后是白色高光与落点溅起的水花。
  */
+function round(value) {
+  return Math.round(value * 10) / 10;
+}
+
+/* 二次贝塞尔取点：水柱实体按采样点建，宽度沿落差线性收细。 */
+function quadPoint(from, control, to, t) {
+  var mt = 1 - t;
+  return {
+    x: mt * mt * from.x + 2 * mt * t * control.x + t * t * to.x,
+    y: mt * mt * from.y + 2 * mt * t * control.y + t * t * to.y
+  };
+}
+
+/* 沿水柱中心线左右各偏半个线宽（法线方向），左侧正走、右侧倒走围成实体。 */
+function streamBody(from, control, to, mouthWidth, dropWidth) {
+  var steps = 10;
+  var left = [];
+  var right = [];
+
+  for (var i = 0; i <= steps; i += 1) {
+    var t = i / steps;
+    var point = quadPoint(from, control, to, t);
+    var ahead = quadPoint(from, control, to, Math.min(1, t + 0.02));
+    var behind = quadPoint(from, control, to, Math.max(0, t - 0.02));
+    var dx = ahead.x - behind.x;
+    var dy = ahead.y - behind.y;
+    var length = Math.sqrt(dx * dx + dy * dy) || 1;
+    var half = (mouthWidth + (dropWidth - mouthWidth) * t) / 2;
+    var nx = (-dy / length) * half;
+    var ny = (dx / length) * half;
+
+    left.push(round(point.x + nx) + ' ' + round(point.y + ny));
+    right.push(round(point.x - nx) + ' ' + round(point.y - ny));
+  }
+
+  return 'M' + left.join(' L') + ' L' + right.reverse().join(' L') + ' Z';
+}
+
 function PourStream(props) {
   var flow = props.flow;
   if (!flow) return null;
@@ -437,11 +606,28 @@ function PourStream(props) {
   var d =
     'M' + Math.round(mouthX) + ' ' + Math.round(mouthY) +
     ' Q' + Math.round(bendX) + ' ' + Math.round(bendY) + ' ' + Math.round(dropX) + ' ' + Math.round(dropY);
+  var body = streamBody(
+    { x: mouthX, y: mouthY },
+    { x: bendX, y: bendY },
+    { x: dropX, y: dropY },
+    thickness * 1.9,
+    thickness * 1.15
+  );
 
   return (
     <svg className="lab-pour" aria-hidden="true" focusable="false">
+      <path className="lab-pour__body" d={body} style={{ fill: flow.color }} />
       <path className="lab-pour__stream" d={d} style={{ stroke: flow.color, strokeWidth: thickness }} />
       <path className="lab-pour__glint" d={d} style={{ strokeWidth: Math.max(0.5, thickness - 1.8) }} />
+      {/* 落点水花：液流砸进目标液面时溅起的一圈 */}
+      <ellipse
+        className="lab-pour__splash"
+        cx={round(dropX)}
+        cy={round(dropY + 1.4)}
+        rx="5"
+        ry="1.8"
+        style={{ fill: flow.color }}
+      />
       <circle
         className="lab-pour__drop"
         cx={Math.round(dropX)}
@@ -534,43 +720,64 @@ function Workbench(props) {
     <section className="lab-bench" aria-label="实验台">
       <div className="lab-bench__bar">
         <span>实验台</span>
-        <span>{items.length} 件</span>
+        <span>
+          {items.length} 件 · 1px = 1mm
+        </span>
       </div>
 
       <div
         ref={setCanvas}
-        className={'lab-bench__canvas' + (canvas.isOver ? ' lab-bench__canvas--over' : '')}
+        className={
+          'lab-bench__canvas' +
+          (LAB_ENGINE === 'konva' ? ' lab-bench__canvas--konva' : '') +
+          (canvas.isOver ? ' lab-bench__canvas--over' : '')
+        }
         onClick={function (event) {
           if (event.target === event.currentTarget) clearSelection();
         }}
       >
-        {items.length === 0 ? (
-          <p className="lab-bench__empty">拖拽器材或试剂到此处</p>
-        ) : null}
+        {/*
+         * Canvas 引擎（默认）：Konva Stage 画台面、器材、液体，
+         * 拖拽 / 吸附 / 层级都在画布对象上完成。属性面板仍然是 HTML，
+         * 作为浮层挂在右下角 —— 输入框、按钮留在 DOM 里更好用。
+         */}
+        {LAB_ENGINE === 'konva' ? (
+          <KonvaBench subText={itemSubText} panel={<BenchPanel item={selected} />} />
+        ) : (
+          <React.Fragment>
+            {/* 台面线：所有器材的玻璃底 / 底座都压在这条线上，器材不会浮在半空 */}
+            <div className="lab-bench__desk" aria-hidden="true">
+              <span className="lab-bench__desk-label">实验台面</span>
+            </div>
 
-        {items.map(function (item) {
-          return (
-            <BenchItem
-              item={item}
-              key={item.id}
-              selected={item.id === selectedId}
-              onSelect={props.onSelect}
-              pour={pourFlow}
-              pourTarget={pourTarget}
-              pourReady={item.id === pourReadyId}
-            />
-          );
-        })}
+            {items.length === 0 ? (
+              <p className="lab-bench__empty">拖拽器材或试剂到此处</p>
+            ) : null}
 
-        <PourStream flow={pourFlow} items={items} />
+            {items.map(function (item) {
+              return (
+                <BenchItem
+                  item={item}
+                  key={item.id}
+                  selected={item.id === selectedId}
+                  onSelect={props.onSelect}
+                  pour={pourFlow}
+                  pourTarget={pourTarget}
+                  pourReady={item.id === pourReadyId}
+                />
+              );
+            })}
+
+            <PourStream flow={pourFlow} items={items} />
+
+            {/* 属性面板浮在画布右上角：选中器材即出现，取消选中就只剩提示卡 */}
+            <BenchPanel item={selected} />
+          </React.Fragment>
+        )}
       </div>
-
-      <BenchActions item={selected} />
     </section>
   );
 }
-
-/* ============================ 选中后的操作条 ============================ */
 
 function contentText(contents) {
   if (contents.length === 0) return '空';
@@ -585,9 +792,49 @@ function contentText(contents) {
     .join(' + ');
 }
 
-function BenchActions(props) {
+/* ============================ 选中后的属性面板 ============================ */
+
+/* 器型 → 中文名，用在面板表头与读数行。 */
+var TYPE_LABEL = {
+  beaker: '烧杯',
+  'test-tube': '试管',
+  erlenmeyer: '锥形瓶',
+  'round-flask': '圆底烧瓶',
+  'volumetric-flask': '容量瓶',
+  'reagent-bottle': '试剂瓶',
+  burner: '酒精灯',
+  stand: '铁架台',
+  rod: '玻璃棒',
+  dropper: '胶头滴管',
+  'wire-gauze': '石棉网',
+  'ph-paper': 'pH 试纸',
+  match: '火柴'
+};
+
+/*
+ * 属性面板：选中器材后浮在实验台右上角（画布内的绝对定位卡片）。
+ * 三层信息：
+ *   表头  名称 · 器型 · 取消选中
+ *   参数  名称输入框、浓度输入框（mol/L）—— 打字只改本地草稿，回车 / 失焦才提交，
+ *         避免每敲一个字符就往全局状态与日志里写一条
+ *   操作  搅拌 · 振荡 · 冲洗 · 加入试剂 · 倒出 · 移走（工具换成 点燃 / 取下）
+ * 没有选中任何器材时保留一张提示卡，面板位置不会跳。
+ */
+function BenchPanel(props) {
   var item = props.item;
   var [pickerOpen, setPickerOpen] = useState(false);
+  var [nameDraft, setNameDraft] = useState('');
+  var [concDraft, setConcDraft] = useState('');
+
+  var renameItem = useLabStore(function (state) {
+    return state.renameItem;
+  });
+  var setConcentration = useLabStore(function (state) {
+    return state.setConcentration;
+  });
+  var clearSelection = useLabStore(function (state) {
+    return state.clearSelection;
+  });
   var addReagent = useLabStore(function (state) {
     return state.addReagent;
   });
@@ -609,91 +856,170 @@ function BenchActions(props) {
   var releaseClamp = useLabStore(function (state) {
     return state.releaseClamp;
   });
+  var stir = useLabStore(function (state) {
+    return state.stir;
+  });
+  var stopStir = useLabStore(function (state) {
+    return state.stopStir;
+  });
+  var shakeItem = useLabStore(function (state) {
+    return state.shakeItem;
+  });
+  var rinseItem = useLabStore(function (state) {
+    return state.rinseItem;
+  });
+  var addLog = useLabStore(function (state) {
+    return state.addLog;
+  });
   var items = useLabStore(function (state) {
     return state.items;
   });
 
   var activeId = item ? item.id : null;
+
+  /* 换选中对象时重置草稿与试剂抽屉（面板永远显示当前器材的真实参数）。 */
   useEffect(
     function () {
+      setNameDraft(item ? item.name : '');
+      setConcDraft(item && item.molarity ? String(item.molarity) : '');
       setPickerOpen(false);
     },
     [activeId]
   );
 
-  if (!item) return null;
+  if (!item) {
+    return (
+      <div className="lab-panel lab-panel--empty">
+        <span className="lab-panel__hint">点击台面上的器材，查看参数与操作</span>
+      </div>
+    );
+  }
 
   var isContainer = item.kind === 'container';
   var phText = item.ph === null ? '--' : item.ph.toFixed(1);
   var matchBurning = items.some(function (entry) {
     return entry.type === 'match' && entry.lit && entry.litUntil > Date.now();
   });
+  /* 面板的「搅拌」会自动拿台上闲置的那根玻璃棒；台上没有棒子就提示先取一根。 */
+  var rod = null;
+  items.forEach(function (entry) {
+    if (!rod && entry.type === 'rod' && !entry.stirring) rod = entry;
+  });
+
+  function commitName() {
+    renameItem(item.id, nameDraft);
+  }
+
+  function commitConcentration() {
+    setConcentration(item.id, concDraft === '' ? 0 : concDraft);
+  }
+
+  function enterCommits(event) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    event.currentTarget.blur();
+  }
 
   return (
-    <div className="lab-bench__actions" onClick={function (event) { event.stopPropagation(); }}>
-      <div className="lab-actions__status">
-        <span className="lab-actions__name">{item.name}</span>
+    <div className="lab-panel" onClick={function (event) { event.stopPropagation(); }}>
+      <div className="lab-panel__head">
+        <span className="lab-panel__title">{item.name}</span>
+        <span className="lab-panel__type">
+          {TYPE_LABEL[item.type] || item.type} · {isContainer ? item.capacity + 'mL' : '工具'}
+        </span>
+        <button
+          className="lab-panel__close"
+          type="button"
+          aria-label="取消选中"
+          title="取消选中"
+          onClick={clearSelection}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="lab-panel__fields">
+        <label className="lab-field">
+          <span className="lab-field__label">名称</span>
+          <input
+            className="lab-field__input"
+            type="text"
+            value={nameDraft}
+            maxLength={16}
+            onChange={function (event) {
+              setNameDraft(event.target.value);
+            }}
+            onBlur={commitName}
+            onKeyDown={enterCommits}
+          />
+        </label>
+
         {isContainer ? (
-          item.stopper ? (
-            <button
-              className={
-                'lab-actions__state' +
-                (item.open ? ' lab-actions__state--open' : ' lab-actions__state--closed')
-              }
-              type="button"
-              aria-pressed={!!item.open}
-              title={item.open ? '点击塞上瓶塞' : '点击打开瓶塞'}
-              onClick={function () {
-                toggleStopper(item.id);
+          <label className="lab-field">
+            <span className="lab-field__label">浓度 mol/L</span>
+            <input
+              className="lab-field__input"
+              type="number"
+              min="0"
+              max="18"
+              step="0.1"
+              value={concDraft}
+              placeholder="0"
+              onChange={function (event) {
+                setConcDraft(event.target.value);
               }}
-            >
-              Status: {item.open ? 'Open' : 'Closed'}
-            </button>
-          ) : (
-            <span className="lab-actions__state">Status: Open</span>
-          )
+              onBlur={commitConcentration}
+              onKeyDown={enterCommits}
+            />
+          </label>
         ) : null}
+      </div>
+
+      <div className="lab-panel__stats">
         {isContainer ? (
-          <span className="lab-actions__line">
+          <span className="lab-panel__line">
             Vol: {item.volume}mL | Temp: {item.temperature}°C | PH: {phText}
           </span>
         ) : (
-          <span className="lab-actions__line">{toolStatus(item, matchBurning)}</span>
+          <span className="lab-panel__line">{toolStatus(item, matchBurning)}</span>
         )}
+
         {isContainer ? (
           <span
             className={
-              'lab-actions__heat' +
-              (item.clamp
-                ? ' lab-actions__heat--even'
-                : item.evenHeat
-                  ? ' lab-actions__heat--even'
-                  : item.heating
-                    ? ' lab-actions__heat--uneven'
-                    : '')
+              'lab-panel__heat' +
+              (item.clamp || item.evenHeat
+                ? ' lab-panel__heat--even'
+                : item.heating
+                  ? ' lab-panel__heat--uneven'
+                  : '')
             }
           >
             {item.clamp
               ? '夹持: 铁夹锁定 · 先「取下」才能移动'
               : item.evenHeat
-                ? '受热: 垫石棉网 · 均匀受热'
+                ? item.stirring
+                  ? '受热: 搅拌中 · 均匀受热'
+                  : '受热: 垫石棉网 · 均匀受热'
                 : item.heating
                   ? '受热: 直接受热 · 玻璃受热不均'
                   : '受热: 未受热'}
           </span>
         ) : null}
+
         {isContainer ? (
-          <span className="lab-actions__contents">
+          <span className="lab-panel__contents">
             Contents: {item.contents.length ? '[' + contentText(item.contents) + ']' : '空'}
           </span>
         ) : null}
+
         {isContainer && item.phenomenon ? (
-          <span className="lab-actions__phenomenon">现象: {item.phenomenon}</span>
+          <span className="lab-panel__phenomenon">现象: {item.phenomenon}</span>
         ) : null}
       </div>
 
-      {isContainer ? (
-        <div className="lab-actions__buttons">
+      <div className="lab-panel__actions">
+        {isContainer ? (
           <button
             className={'lab-action' + (pickerOpen ? ' lab-action--active' : '')}
             type="button"
@@ -705,6 +1031,9 @@ function BenchActions(props) {
           >
             加入试剂
           </button>
+        ) : null}
+
+        {isContainer ? (
           <button
             className="lab-action"
             type="button"
@@ -714,6 +1043,75 @@ function BenchActions(props) {
           >
             倒出
           </button>
+        ) : null}
+
+        {isContainer ? (
+          <button
+            className={'lab-action' + (item.stirring ? ' lab-action--active' : '')}
+            type="button"
+            aria-pressed={!!item.stirring}
+            title={
+              item.stirring
+                ? '提前收手'
+                : rod
+                  ? '用台上的玻璃棒搅拌：旋起涡流，可溶固体溶解更快'
+                  : '先在辅助工具里取一根玻璃棒'
+            }
+            onClick={function () {
+              if (item.stirring) {
+                stopStir(item.id);
+                return;
+              }
+              if (rod) stir(rod.id, item.id);
+              else addLog('警告', '先把玻璃棒放到实验台上，再回来搅拌。');
+            }}
+          >
+            {item.stirring ? '停手' : '搅拌'}
+          </button>
+        ) : null}
+
+        {isContainer ? (
+          <button
+            className={'lab-action' + (item.shaking ? ' lab-action--active' : '')}
+            type="button"
+            aria-pressed={!!item.shaking}
+            title="振荡摇匀：让液体与固体充分接触"
+            onClick={function () {
+              shakeItem(item.id);
+            }}
+          >
+            振荡
+          </button>
+        ) : null}
+
+        {isContainer ? (
+          <button
+            className="lab-action"
+            type="button"
+            title="用蒸馏水冲洗：倒掉内容物并回到室温"
+            onClick={function () {
+              rinseItem(item.id);
+            }}
+          >
+            冲洗
+          </button>
+        ) : null}
+
+        {isContainer && item.stopper ? (
+          <button
+            className={'lab-action' + (item.open ? ' lab-action--active' : '')}
+            type="button"
+            aria-pressed={!!item.open}
+            title={item.open ? '点击塞上瓶塞' : '点击打开瓶塞，才能倒液 / 加试剂'}
+            onClick={function () {
+              toggleStopper(item.id);
+            }}
+          >
+            {item.open ? '塞上' : '开塞'}
+          </button>
+        ) : null}
+
+        {isContainer ? (
           <button
             className="lab-action"
             type="button"
@@ -723,62 +1121,50 @@ function BenchActions(props) {
           >
             清空
           </button>
-          {item.clamp ? (
-            <button
-              className="lab-action lab-action--active"
-              type="button"
-              onClick={function () {
-                setPickerOpen(false);
-                releaseClamp(item.id);
-              }}
-            >
-              取下
-            </button>
-          ) : null}
+        ) : null}
+
+        {item.clamp ? (
           <button
-            className="lab-action lab-action--ghost"
+            className="lab-action lab-action--active"
             type="button"
             onClick={function () {
-              setPickerOpen(false);
-              removeItem(item.id);
+              releaseClamp(item.id);
             }}
           >
-            移除
+            取下
           </button>
-        </div>
-      ) : (
-        <div className="lab-actions__buttons">
-          {item.type === 'burner' || item.type === 'match' ? (
-            <button
-              className={'lab-action' + (item.lit ? ' lab-action--active' : '')}
-              type="button"
-              aria-pressed={!!item.lit}
-              onClick={function () {
-                lightItem(item.id);
-              }}
-            >
-              {item.lit ? '熄灭' : item.type === 'match' ? '划燃' : '点燃'}
-            </button>
-          ) : null}
+        ) : null}
+
+        {!isContainer && (item.type === 'burner' || item.type === 'match') ? (
           <button
-            className="lab-action lab-action--ghost"
+            className={'lab-action' + (item.lit ? ' lab-action--active' : '')}
             type="button"
+            aria-pressed={!!item.lit}
             onClick={function () {
-              removeItem(item.id);
+              lightItem(item.id);
             }}
           >
-            移走工具
+            {item.lit ? '熄灭' : item.type === 'match' ? '划燃' : '点燃'}
           </button>
-        </div>
-      )}
+        ) : null}
+
+        <button
+          className="lab-action lab-action--ghost"
+          type="button"
+          onClick={function () {
+            removeItem(item.id);
+          }}
+        >
+          {isContainer ? '移走' : '移走工具'}
+        </button>
+      </div>
 
       {isContainer && pickerOpen ? (
-        <div className="lab-reagent-picker" id="lab-reagent-picker">
-          <span className="lab-reagent-picker__label">加入试剂</span>
+        <div className="lab-panel__picker" id="lab-reagent-picker">
           {LAB_REAGENTS.map(function (reagent) {
             return (
               <button
-                className="lab-reagent-picker__item"
+                className="lab-panel__reagent"
                 type="button"
                 key={reagent.id}
                 title={reagent.name}
@@ -879,8 +1265,14 @@ function DragPreview(props) {
     if (item.heating) ghostClass += ' lab-vessel--heating';
     if (item.boiling) ghostClass += ' lab-vessel--boiling';
 
+    var ghostBox = item.dimensions || dimensionsOf(item.type);
+
     return (
-      <div className={ghostClass} data-item-id={item.id}>
+      <div
+        className={ghostClass}
+        data-item-id={item.id}
+        style={{ width: ghostBox.width, height: ghostBox.height }}
+      >
         {/* suffix 让幽灵的 SVG id 与台上的原件错开，避免重复 id 影响裁切 */}
         <LabGraphic item={item} suffix="-ghost" />
         <span className="lab-vessel__name">{item.name}</span>
@@ -932,6 +1324,9 @@ function LabPage() {
   const stackGauze = useLabStore(function (state) {
     return state.stackGauze;
   });
+  const stir = useLabStore(function (state) {
+    return state.stir;
+  });
   const selectItem = useLabStore(function (state) {
     return state.selectItem;
   });
@@ -947,6 +1342,7 @@ function LabPage() {
 
   function handleDragStart(event) {
     setActiveDrag(event.active.data.current || null);
+    recordGrabOffset(event);
   }
 
   function handleDragEnd(event) {
@@ -961,8 +1357,26 @@ function LabPage() {
 
     if (data.kind === 'library') {
       if (data.item.kind === 'reagent') {
-        if (target) {
-          addReagent(target, data.item);
+        var dropId = target;
+
+        /*
+         * Canvas 引擎里容器是 Konva 对象、不是 DOM 节点，没有 droppable 可接，
+         * 所以按拖拽令牌的落点做一次矩形命中，找压在最上面的容器。
+         */
+        if (!dropId) {
+          var shape = data.item.shape || 'dropper';
+          var spot = dragPoint(canvasRef.current, event, shape);
+          var box = dimensionsOf(shape);
+          var hit = containerAt(
+            spot.x + box.width / 2,
+            spot.y + box.height / 2,
+            useLabStore.getState().items
+          );
+          if (hit) dropId = hit.id;
+        }
+
+        if (dropId) {
+          addReagent(dropId, data.item);
         } else {
           addLog('警告', '请把试剂拖到容器中。');
         }
@@ -970,7 +1384,10 @@ function LabPage() {
       }
 
       if (over.id === 'bench' || target) {
-        addItem(data.item, dragPoint(canvasRef.current, event));
+        addItem(
+          data.item,
+          landedPoint(canvasRef.current, event, data.item.shape || data.item.id)
+        );
       }
       return;
     }
@@ -988,7 +1405,7 @@ function LabPage() {
          */
         if (data.item.type === 'match' && targetItem && targetItem.type === 'burner' && !targetItem.lit) {
           lightItem(target);
-          var spot = dragPoint(canvasRef.current, event);
+          var spot = landedPoint(canvasRef.current, event, data.item.type);
           moveItem(data.id, spot.x, spot.y);
           return;
         }
@@ -1014,6 +1431,12 @@ function LabPage() {
           return;
         }
 
+        /* 玻璃棒放进容器：开始搅拌（液面旋涡、可溶固体逐渐溶解、传热更均匀）。 */
+        if (data.item.type === 'rod' && targetItem && targetItem.kind === 'container') {
+          stir(data.id, target);
+          return;
+        }
+
         if (targetItem && targetItem.kind === 'container' && data.item.kind === 'container') {
           startPour(data.id, target);
           return;
@@ -1021,14 +1444,14 @@ function LabPage() {
       }
 
       if (over.id === 'bench' || target) {
-        var point = dragPoint(canvasRef.current, event);
+        var point = landedPoint(canvasRef.current, event, data.item.type);
 
         /*
-         * 容器松手在铁圈附近（玻璃底中心距圈心 < 50px）也吸上去。
+         * 容器松手在铁圈附近（玻璃底中心距圈心 < CLAMP_RADIUS）也吸上去。
          * 判定放在 moveItem 之前：被夹住的容器拖回原位时不会先解夹再夹一次。
          */
         if (data.item.kind === 'container') {
-          var standId = nearestStand(point);
+          var standId = nearestStand(data.item, point);
           if (standId) {
             clampOnStand(data.id, standId);
             return;
@@ -1068,7 +1491,14 @@ function LabPage() {
       return;
     }
 
-    addItem(item);
+    /* 点击放入：沿台面依次排开，纵向交给 settleY 落在台面线上。 */
+    var canvas = canvasRef.current;
+    var state = useLabStore.getState();
+    var type = item.shape || item.id;
+    var x = 36 + (state.items.length % 6) * 104;
+    var height = canvas ? canvas.getBoundingClientRect().height : 520;
+
+    addItem(item, { x: x, y: settleY(type, x, 40, height, state.items) });
   }
 
   /* 加热引擎：每秒结算一次酒精灯对邻近容器的加热，离开火焰的容器自然降温。 */
@@ -1087,6 +1517,20 @@ function LabPage() {
     var timer = window.setInterval(function () {
       useLabStore.getState().tickPour();
     }, 60);
+
+    return function () {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  /*
+   * 搅拌引擎：每 120ms 推进一次涡流进度与溶解量，4.2s 到点自动收棒。
+   * 节奏比加热快得多，涡流和固体逐份消失才连续。
+   */
+  useEffect(function () {
+    var timer = window.setInterval(function () {
+      useLabStore.getState().tickStir();
+    }, 120);
 
     return function () {
       window.clearInterval(timer);

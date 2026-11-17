@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import LabPage from './LabPage';
 import { useLabStore, LAB_GEOMETRY, boundsOf, mouthPoint, pourAlign } from './store';
+import { LAB_ENGINE } from './engine';
 
 var CL = (window.CL = window.CL || {});
 var root = null;
@@ -41,5 +42,7 @@ CL.lab = {
   geometry: LAB_GEOMETRY,
   boundsOf: boundsOf,
   mouthPoint: mouthPoint,
-  pourAlign: pourAlign
+  pourAlign: pourAlign,
+  /* 当前渲染引擎（'konva' | 'dom'），README 与自测脚本都读这个值 */
+  engine: LAB_ENGINE
 };

@@ -14,7 +14,9 @@
  * 新增反应只需往 RULES 里追加一条，不需要改引擎本身。
  */
 
-/* 物质登记表：label 用于日志与选择器，color 是溶液 / 固体颜色，ph 为近似值。 */
+/* 物质登记表：label 用于日志与选择器，color 是溶液 / 固体颜色，ph 为近似值。
+ * soluble 标出「加水能溶」的固体（碳酸氢钠），搅拌时才会逐份溶解；
+ * 碳酸钙、金属与各种沉淀不标 —— 搅拌只能让它们悬浮，不会凭空消失。 */
 export var SPECIES = {
   /* 酸与碱 */
   HCl: { label: 'HCl', name: '盐酸', color: '#e2ecef', ph: 1 },
@@ -56,7 +58,7 @@ export var SPECIES = {
   Zn: { label: 'Zn', name: '锌', solid: true, color: '#969c9b' },
   Mg: { label: 'Mg', name: '镁', solid: true, color: '#b2b2a8' },
   CaCO3: { label: 'CaCO₃', name: '碳酸钙', solid: true, color: '#c9c5b7' },
-  NaHCO3: { label: 'NaHCO₃', name: '碳酸氢钠', solid: true, color: '#efeee6' },
+  NaHCO3: { label: 'NaHCO₃', name: '碳酸氢钠', solid: true, soluble: true, color: '#efeee6' },
   CuO: { label: 'CuO', name: '氧化铜', solid: true, color: '#3b3733' },
   CaO: { label: 'CaO', name: '氧化钙', solid: true, color: '#f2f0e8' },
   AgCl: { label: 'AgCl', name: '氯化银', solid: true, color: '#eceade' },
@@ -89,6 +91,12 @@ export function speciesColor(chemical) {
 export function speciesPh(chemical) {
   var species = speciesOf(chemical);
   return species && typeof species.ph === 'number' ? species.ph : null;
+}
+
+/* 这种物质的水溶性：只有标了 soluble 的固体才会在搅拌时溶进液体里。 */
+export function speciesSoluble(chemical) {
+  var species = speciesOf(chemical);
+  return !!(species && species.soluble);
 }
 
 function entryQuantity(entry) {

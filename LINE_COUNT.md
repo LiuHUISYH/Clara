@@ -7,7 +7,7 @@
 在项目根目录执行：
 
 ```bash
-wc -l index.html css/*.css js/*.js lab/src/* data/*.json
+wc -l index.html css/*.css js/*.js lab/src/*.js lab/src/*.jsx lab/src/canvas/* lab/src/canvas/art/* lab/src/canvas/effects/* data/*.json
 ```
 
 结果（2026-11 统计）：
@@ -18,7 +18,7 @@ wc -l index.html css/*.css js/*.js lab/src/* data/*.json
 | `css/base.css` | 512 |
 | `css/layout.css` | 440 |
 | `css/components.css` | 1,634 |
-| `css/pages.css` | 2,876 |
+| `css/pages.css` | 3,207 |
 | `js/utils.js` | 570 |
 | `js/storage.js` | 400 |
 | `js/data.js` | 325 |
@@ -29,35 +29,57 @@ wc -l index.html css/*.css js/*.js lab/src/* data/*.json
 | `js/molecule3d.js` | 985 |
 | `js/tools.js` | 765 |
 | `js/app.js` | 299 |
-| `lab/src/LabPage.jsx` | 1,125 |
-| `lab/src/Glass.jsx` | 735 |
-| `lab/src/Vessel.jsx` | 385 |
+| `lab/src/LabPage.jsx` | 1,569 |
+| `lab/src/store.js` | 1,781 |
+| `lab/src/canvas/art/LiquidBody.jsx` | 346 |
+| `lab/src/canvas/art/FlameShape.jsx` | 125 |
+| `lab/src/canvas/art/ToolShapes.jsx` | 406 |
+| `lab/src/canvas/art/GlassShape.jsx` | 264 |
+| `lab/src/canvas/art/BeakerShape.jsx` | 178 |
+| `lab/src/canvas/effects/PourStream.jsx` | 189 |
+| `lab/src/canvas/effects/VesselFx.jsx` | 200 |
+| `lab/src/canvas/flow.js` | 134 |
+| `lab/src/canvas/motion.js` | 106 |
+| `lab/src/canvas/geometry.js` | 249 |
+| `lab/src/canvas/KonvaBench.jsx` | 362 |
+| `lab/src/canvas/DeskLayer.jsx` | 186 |
+| `lab/src/canvas/palette.js` | 138 |
+| `lab/src/canvas/EquipmentNode.jsx` | 153 |
+| `lab/src/canvas/EquipmentArt.jsx` | 121 |
+| `lab/src/canvas/EquipmentImage.jsx` | 106 |
+| `lab/src/canvas/liquid.js` | 105 |
+| `lab/src/canvas/LabStage.jsx` | 87 |
+| `lab/src/canvas/useStageSize.js` | 52 |
+| `lab/src/Glass.jsx` | 666 |
+| `lab/src/reactions.js` | 633 |
+| `lab/src/Vessel.jsx` | 432 |
+| `lab/src/art.js` | 274 |
+| `lab/src/icons.jsx` | 227 |
 | `lab/src/library.js` | 140 |
-| `lab/src/reactions.js` | 625 |
-| `lab/src/main.jsx` | 45 |
-| `lab/src/store.js` | 1,343 |
+| `lab/src/engine.js` | 19 |
+| `lab/src/main.jsx` | 48 |
 | `data/knowledge.json` | 1,098 |
 | `data/quiz.json` | 640 |
 | `data/molecules.json` | 2,551 |
 | `data/nameMap.json` | 55 |
 | `data/equations.json` | 414 |
-| **合计** | **19,625** |
+| **合计** | **24,854** |
 
 ## 二、分类汇总
 
 | 类别 | 行数 | 占比 |
 | --- | ---: | ---: |
-| HTML | 117 | 0.6% |
-| CSS | 5,462 | 27.8% |
-| JavaScript / JSX | 9,288 | 47.3% |
-| JSON 数据 | 4,758 | 24.2% |
-| **核心交付代码合计** | **19,625** | **100%** |
+| HTML | 117 | 0.5% |
+| CSS | 5,793 | 23.3% |
+| JavaScript / JSX | 14,186 | 57.1% |
+| JSON 数据 | 4,758 | 19.1% |
+| **核心交付代码合计** | **24,854** | **100%** |
 
 ```
-19,625 ÷ 8,000 ≈ 2.45 倍
+24,854 ÷ 8,000 ≈ 3.11 倍
 ```
 
-超出 PRD 最低要求约 145%。
+超出 PRD 最低要求约 211%。
 
 ## 三、附加文件（不计入核心交付代码）
 
@@ -69,12 +91,13 @@ wc -l index.html css/*.css js/*.js lab/src/* data/*.json
 | `tools/lab_reactions_test.js` | 225 | 56 项断言的实验室反应引擎自测（JavaScriptCore） |
 | `tools/syntax_check.js` | 74 | 逐文件语法与加载检查 |
 | `data/*.js`（5 个） | 30 | 自动生成的包装文件（每个 6 行） |
-| `package.json` | 18 | 实验室源码重建依赖与脚本 |
-| `lab/README.md` | 252 | 实验室分步说明与重建命令 |
-| `lab/chem-lab.js` | 53 | esbuild 打包运行时（含第三方库与许可注释） |
-| **附加合计** | **1,849** | |
+| `package.json` | 20 | 实验室源码重建依赖与脚本（含 Konva / react-konva） |
+| `lab/README.md` | 419 | 实验室分步说明与重建命令 |
+| `lab/assets/equipment/README.md` | 22 | 可选 PNG 器材贴图的命名与出图约定 |
+| `lab/chem-lab.js` | 87 | esbuild 打包运行时（含第三方库与许可注释） |
+| **附加合计** | **2,074** | |
 
-全部文件（含附加）总计：**21,474 行**。
+全部文件（含附加）总计：**26,928 行**（另附 `README.md` 530 行说明文档，不计入）。
 
 ## 四、统计口径说明
 
@@ -84,10 +107,10 @@ wc -l index.html css/*.css js/*.js lab/src/* data/*.json
    - 知识点讲解、题目解析、易错点均为针对具体概念撰写的实质内容（例如“氢键与水的反常性质”包含 4 段讲解、2 个带步骤的实例、4 条易错点与 4 条小结）；
    - CSS 按组件 / 页面拆分，全站页面改版后已删除无引用的旧卡片、统计条与徽标样式，保留的选择器均有实际用途；
    - 3D 渲染器、配平算法、VSEPR 推测均为真实实现，并配有测试；
-   - 虚拟实验室步骤 1–7 与重构步骤 1–2 使用 React + Zustand 实现真实的三块布局、分类折叠、拖拽放置、容器内物质与温度模型、酒精灯火焰碰撞加热、火焰 SVG、白底玻璃器材（浅灰描边 + 白色高光 + 壁厚暗线 + 灯帽可移除的三层火焰酒精灯）与波浪液面的 SVG 分层渲染、画布内自由拖动（`DragOverlay` 跟手幽灵、按实测宽高钳制落点、松手置顶、容器中心距离判定倒液）、火焰碰撞加热（容器玻璃底对焰尖的矩形判定 + 火焰受用高亮 + 100°C 沸腾气泡）、火柴点火（划燃 9 秒、燃尽自灭、酒精灯只认燃着的火柴）、石棉网匀热（火焰 → 石棉网 → 容器的两段判定、「垫石棉网 · 均匀受热」与「受热不均」警告，配套铁架台与石棉网线稿），以及一张 41 种物质 / 33 条规则的反应表与配套的沉淀、气泡、指示剂与受热分解渲染，不是静态占位图。
+   - 虚拟实验室使用 React + Zustand 按「1px = 1mm」的物理尺度重写：左侧是按分类折叠的 2 列图标库（32×32 线稿图标按器材形状 / 试剂状态 / 液体色相分派，替代旧文字列表），中间是带标尺网格与台面线的实验台，右侧是浮层属性面板（器材名称可直接改名、mol·L⁻¹ 浓度可录入、Vol / Temp / PH、受热状态、Contents、现象、加入试剂 / 倒出 / 搅拌 / 振荡 / 冲洗 / 开塞 / 清空 / 取下 / 点燃 / 移走）。器材按真实毫米尺寸建模（250mL 烧杯 78×100、20mL 试管 20×152、铁架台 200×560、玻璃棒 φ6×236、酒精灯 80×118、石棉网 120×10、试剂瓶 62×182），拖拽落点按真实 hit-box 钳制，松手后按重力沉降：先判定石棉网、再判定焰尖、最后落到台面；试管松手时按底部到环的距离吸附进铁夹，石棉网落焰吸附，火柴只能点燃燃着的酒精灯；倾倒用几何对准（瓶口对准容器口 + 高度差）生成三层水柱并做体积 / 容量结算，不是静态占位图。
 3. **数据文件计入**：PRD 明确把 JSON 数据计入总行数；`data/molecules.json` 的 2,551 行来自 33 个分子的逐原子坐标与逐键连接，`data/knowledge.json` 的 1,098 行来自 20 个知识点的完整讲解，均属于产品内容本身，不是重复填充。
 4. **包装文件单列**：`data/*.js` 是为了支持 `file://` 直接运行而由脚本生成的同内容副本，只有 30 行（每个文件一行 JSON），已在统计中单列，避免重复计算数据量。
-5. **实验室打包文件单列**：`lab/chem-lab.js` 是 esbuild 产物（含 React / Zustand / dnd-kit 及许可注释），不计入核心源码；`lab/src/*` 的 4,398 行 JSX/JS 才是实际维护的实验室代码，其中 625 行是反应规则表与引擎（含受热分解）、1,343 行是 Zustand 状态与加热引擎（火焰 / 石棉网两段受热判定、均匀受热与受热不均状态、沸腾派生、火柴燃烧计时与点火校验、瓶塞开合门禁、倾倒动画状态机、铁架台刚体夹持、预置试剂瓶的 `stock` / `label` 建模）、1,125 行是页面与拖拽交互（跟手幽灵、距离判定倒液、倾斜与水柱动画、火柴拖到灯上点火、石棉网与容器互相吸附、铁夹距离吸附、边界钳制）、735 行是玻璃器材（烧杯导流槽与丝印刻度、试管、圆肩试剂瓶与白底黑字标签、6 层渐变高光、正弦液面与浑浊 / 气泡 / 水蒸气）、385 行是酒精灯（玻璃灯体 / 灯帽 / 三层火焰 / 火焰受用高亮）、火柴（木梗 / 火柴头 / 小火苗）、铁架台、石棉网、拟物玻璃棒与胶头滴管的 SVG、140 行是器材与预置试剂清单、45 行是入口挂载。
+5. **实验室打包文件单列**：`lab/chem-lab.js` 是 esbuild 产物（含 React / Zustand / Konva / react-konva / dnd-kit 及许可注释），不计入核心源码；`lab/src/` 下 9,296 行 JSX/JS 才是实际维护的实验室代码（其中 3,507 行是 `canvas/` 的 Canvas 引擎：Stage 与三层 Layer、背景网格 / 台面线 / 标尺、器材节点与贴图出口、烧杯五层玻璃与其余 12 种器型的矢量外形、边界钳制与吸附几何、内腔与液面、渐变调色，以及步骤 3–4 的动画时钟 `motion.js`、倒液水柱几何 `flow.js`、会起伏的 `LiquidBody`、逐帧抖动的 `FlameShape` 与气泡 / 沉淀 / 蒸汽特效），其中 1,781 行是 Zustand 状态与物理引擎（毫米级 `TOOLS` 尺寸表、`hitBox` / `dimensionsOf` / `boundsOf` / `mouthPoint` / `basePoint`、松手 `settleY` 的石棉网 → 焰尖 → 台面三级沉降、铁架台铁夹距离吸附、火焰与石棉网两段受热判定、均匀受热与受热不均、沸腾派生、火柴燃烧计时与点火校验、瓶塞开合门禁、倾倒动画状态机、按 `art.top/bottom` 反算液面与杆尖、搅拌 / 振荡 / 冲洗 / 改名 / 浓度）、1,569 行是页面与交互（图标库、跟手幽灵、指针偏移换算、试剂落点命中、浮层 `BenchPanel` 的草稿提交与操作按钮、窄屏面板下移），666 行是三段 SVG 渲染（液面 / 反应现象），633 行是反应规则表与引擎，432 行是器材 SVG（酒精灯玻璃灯体 / 可移除灯帽 / 三层火焰 + 受用高亮、火柴、铁架台 200×560 与环、φ6 玻璃棒、胶头滴管、石棉网、pH 试纸），274 行是毫米尺寸与器材映射表 `art.js`，227 行是 32×32 线稿图标 `icons.jsx`，140 行是器材与预置试剂清单，19 行是引擎开关 `engine.js`，48 行是入口挂载。
 
 ## 五、复现校验
 
@@ -105,7 +128,7 @@ python3 tools/build_data.py
 /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc tools/lab_reactions_test.js
 
 # 5. 行数统计（核心源码）
-wc -l index.html css/*.css js/*.js lab/src/* data/*.json
+wc -l index.html css/*.css js/*.js lab/src/*.js lab/src/*.jsx lab/src/canvas/*.js lab/src/canvas/*.jsx lab/src/canvas/art/*.jsx lab/src/canvas/effects/*.jsx data/*.json
 
 # 6. 实验室源码变更后重建运行时
 npm install

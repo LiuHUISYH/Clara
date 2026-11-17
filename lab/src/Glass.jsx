@@ -1,7 +1,12 @@
 /**
  * Glass.jsx —— 虚拟实验室的玻璃器材渲染
  * ------------------------------------------------------------------
- * 器材全部用 SVG 绘制（viewBox 0 0 80 104）。白底玻璃的做法：
+ * 尺寸全部来自 art.js 的真实毫米表：每只容器的 viewBox 就是它自己的
+ * `size`（烧杯 78×100、试管 20×152、锥形瓶 90×110 …），1 单位 = 1mm，
+ * 所以同样的 stroke-width 在细试管上更「细」、在大烧杯上更像厚壁，
+ * 摆在一起就是实验台上的真实比例。
+ *
+ * 白底玻璃的做法：
  *   描边    统一 rgba(0,0,0,0.15)，悬停由 CSS 加深；高温时整体转浅暖棕
  *   玻璃体  GlassDefs 里的六层渐变——本体（左缘白高光 → 右缘厚度）、纵向薄雾、
  *           液体纵深、液面柔光带、液面反光斑、漫反射斑（-gloss，被 body 裁切）
@@ -17,147 +22,11 @@
  * 调整时不要只改轮廓：液体高度按 top..bottom 映射。
  */
 import React from 'react';
+import { GLASS } from './art';
 
 function round(value) {
   return Math.round(value * 100) / 100;
 }
-
-var GLASS = {
-  /*
-   * 烧杯：直筒杯身 + 右侧导流槽（倒液时看得见液体从哪边出去）+ 杯壁印刷刻度。
-   * body 是裁切与描边的唯一轮廓，spout 是叠在轮廓上的外翻唇边，
-   * graduations 里的毫升数用 <text> 印在杯壁左侧，和真烧杯的刻度一致。
-   */
-  beaker: {
-    /* 右侧杯口直接收成一个尖嘴（导流槽），倒液时液体从这一侧离开杯口 */
-    body:
-      'M14 26.2 V90 Q14 96 20 96 H60 Q66 96 66 90 V28.6 L69.6 22.9 Q67 21.4 63.8 25.2 L63.4 26.2 H14 Z',
-    top: 28.4,
-    bottom: 94,
-    x: 14,
-    width: 52,
-    spoutArc: 'M63.9 25.6 Q66.8 23.8 69 23.5',
-    rim: 'M13.4 25.8 H63.6',
-    mouthArc: 'M14.4 27 Q40 30.6 63.2 27',
-    wall: 'M16.6 30 V88.4 Q16.9 93.2 20.6 93.6',
-    edge: 'M64.8 28 V90.2 Q64.8 95.3 59.4 95.3',
-    base: 'M20.2 92.2 Q40 96.7 59.8 92.2',
-    highlight: 'M18.8 33 V86.6',
-    highlightSoft: 'M61.2 35 V72',
-    gloss: { cx: 23.4, cy: 62, rx: 8.6, ry: 26 },
-    graduations: [
-      { y: 34, text: '200', x1: 16.8, x2: 23.6, tx: 25.4, anchor: 'start' },
-      { y: 48, text: '150', x1: 16.8, x2: 23.6, tx: 25.4, anchor: 'start' },
-      { y: 62, text: '100', x1: 16.8, x2: 23.6, tx: 25.4, anchor: 'start' },
-      { y: 76, text: '50', x1: 16.8, x2: 23.6, tx: 25.4, anchor: 'start' }
-    ],
-    ticks: [
-      [41, 16.8, 20.4],
-      [55, 16.8, 20.4],
-      [69, 16.8, 20.4]
-    ]
-  },
-  'test-tube': {
-    body: 'M30.6 14 H49.4 V78 Q49.4 94 40 94 Q30.6 94 30.6 78 Z',
-    top: 16,
-    bottom: 93,
-    x: 30.6,
-    width: 18.8,
-    mouth: { cx: 40, cy: 14.2, rx: 9.4, ry: 2.2 },
-    rim: 'M30.2 13.6 H49.8',
-    mouthArc: 'M31 16 Q40 19 49 16',
-    edge: 'M48.4 17.4 V77.6 Q48.4 92.6 40 92.6 Q33.4 92.6 32.2 81',
-    base: 'M36 92.8 Q40 94.6 44 92.8',
-    highlight: 'M33 19.6 V77',
-    highlightSoft: 'M46.8 21 V44',
-    gloss: { cx: 34.4, cy: 58, rx: 3.2, ry: 24 },
-    graduations: [
-      { y: 40, text: '15', x1: 31.2, x2: 35.2, tx: 36.6, anchor: 'start' },
-      { y: 55, text: '10', x1: 31.2, x2: 35.2, tx: 36.6, anchor: 'start' },
-      { y: 70, text: '5', x1: 31.2, x2: 35.2, tx: 36.6, anchor: 'start' }
-    ],
-    ticks: [
-      [47.5, 31.2, 33.6],
-      [62.5, 31.2, 33.6]
-    ]
-  },
-  erlenmeyer: {
-    body: 'M34 14 H46 V34 L62 88 Q64 94 58 94 H22 Q16 94 18 88 L34 34 Z',
-    top: 38,
-    bottom: 93,
-    x: 18,
-    width: 44,
-    mouth: { cx: 40, cy: 14, rx: 6.2, ry: 2 },
-    neckHighlight: 'M36.6 18.6 V29.4',
-    highlight: 'M25.4 84 Q30.2 64 34.4 44',
-    highlightSoft: 'M57.8 86 Q52 68 46.4 46',
-    edge: 'M59.8 84.4 Q62.6 91.6 56.6 93',
-    base: 'M23.4 89.4 Q40 94.4 56.6 89.4',
-    ticks: [
-      [52, 30, 36],
-      [60, 28, 34]
-    ]
-  },
-  'round-flask': {
-    body: 'M34 14 H46 V30 C48.4 30.8 51 32.8 53.4 36 C60.4 45.6 66.4 52.6 66.4 62.6 C66.4 80.4 55 94 40 94 C25 94 13.6 80.4 13.6 62.6 C13.6 52.6 19.6 45.6 26.6 36 C29 32.8 31.6 30.8 34 30 Z',
-    top: 38,
-    bottom: 93,
-    x: 12,
-    width: 56,
-    mouth: { cx: 40, cy: 14, rx: 6.2, ry: 2 },
-    neckHighlight: 'M36.6 18.4 V28.6',
-    highlight: 'M21.4 70 Q21.8 52 28.6 40.4',
-    highlightSoft: 'M59.4 62 Q58.4 48 49.6 40.4',
-    edge: 'M63.8 70 Q62.6 84.4 51.4 91.2',
-    base: 'M27.4 87.6 Q40 93.4 52.6 87.6'
-  },
-  'volumetric-flask': {
-    body: 'M34 14 H46 V30 C58 34 64 44 64 58 C64 80 53 94 40 94 C27 94 16 80 16 58 C16 44 22 34 34 30 Z',
-    top: 34,
-    bottom: 93,
-    x: 16,
-    width: 48,
-    mouth: { cx: 40, cy: 14, rx: 6.2, ry: 2 },
-    neckHighlight: 'M36.6 18.4 V27.6',
-    highlight: 'M23 60 Q25 46 34.6 39.2',
-    highlightSoft: 'M56.6 62 Q54.6 48 46 40.4',
-    edge: 'M60.6 62 Q59.4 80 48.6 89',
-    base: 'M28.6 86.2 Q40 92 51.4 86.2',
-    mark: 'M28.6 62 Q40 65 51.4 62'
-  },
-  /*
-   * 试剂瓶（细口瓶）：圆肩瓶身 + 短颈 + 玻璃瓶塞 + 白底黑字标签。
-   * labelRect / labelBand 是标签纸的几何，标签文字由 BottleLabel 按 item.label
-   * 逐行排（名称 / 化学式 / 等级 / 净含量）；没有 label 的空瓶留一张空白标签。
-   * stopper 字段里的几何同时被瓶塞图形与点击热区使用；开塞后瓶塞按 CSS
-   * 抬离瓶口（见 pages.css 的 .lab-stopper--open）。
-   */
-  'reagent-bottle': {
-    body: 'M34 30 V18 Q34 14.6 37.4 14.6 H42.6 Q46 14.6 46 18 V30 Q52 31.8 55.4 35.2 Q59 39 59 45.4 V89 Q59 96 52 96 H28 Q21 96 21 89 V45.4 Q21 39 24.6 35.2 Q28 31.8 34 30 Z',
-    top: 37,
-    bottom: 95,
-    x: 21,
-    width: 38,
-    mouth: { cx: 40, cy: 14.4, rx: 6.2, ry: 1.8 },
-    neckRing: 'M33.6 16.6 H46.4',
-    mouthArc: 'M34 16 Q40 18.2 46 16',
-    wall: 'M23.6 47 V89.6',
-    edge: 'M57.6 47 V88 Q57.6 94.6 51.6 94.8',
-    base: 'M25.6 91.4 Q40 95.6 54.4 91.4',
-    highlight: 'M24.8 49 V86',
-    highlightSoft: 'M55 51 V70',
-    gloss: { cx: 27.4, cy: 72, rx: 4.4, ry: 20 },
-    ticks: [],
-    labelRect: { x: 25.2, y: 52, width: 29.6, height: 26.4 },
-    labelBand: { x: 25.2, y: 52, width: 29.6, height: 2.2 },
-    stopper: {
-      plug: 'M34.2 15.8 L35 8.8 H45 L45.8 15.8 Z',
-      knob: 'M40 1 Q44.6 1 44.6 5.2 Q44.6 9.4 40 9.4 Q35.4 9.4 35.4 5.2 Q35.4 1 40 1 Z',
-      spec: 'M37 4.4 Q37 2.7 38.6 2.4',
-      hit: { x: 31, y: 0.2, width: 18, height: 18.8 }
-    }
-  }
-};
 
 var SOLID_COLORS = {
   Fe: '#686760',
@@ -172,8 +41,8 @@ function liquidHeight(item, shape) {
   var ratio = Math.max(0, Math.min(1, item.volume / item.capacity));
   if (ratio === 0) return 0;
   /* 体积→高度用 0.75 次幂：10 mL 在 250 mL 烧杯里也看得见，高低仍随体积单调变化。
-     最薄一层留 8px，少体积液体才不会缩成一条看不出颜色的细线。 */
-  return Math.max(8, (shape.bottom - shape.top) * Math.pow(ratio, 0.75));
+     最薄一层留 6mm，少体积液体才不会缩成一条看不出颜色的细线。 */
+  return Math.max(6, (shape.bottom - shape.top) * Math.pow(ratio, 0.75));
 }
 
 /* 一条由 segments 个波峰组成的横波，用于液面顶边；相邻波峰上下交替，才是一条平滑的波。 */
@@ -304,6 +173,48 @@ function LiquidLayer(props) {
 }
 
 /*
+ * 搅拌涡流：液面中央凹下去一块，外围三圈亮弧打旋。
+ * 只在 item.stirring 时挂载 —— 旋转、明暗呼吸都交给 CSS（.lab-swirl__spin /
+ * .lab-swirl__arc），这里只按容器口径排几何；用内腔裁切，弧线不会爬出玻璃壁。
+ */
+function Swirl(props) {
+  var shape = props.shape;
+  var surface = shape.bottom - props.height;
+  var cx = round(shape.x + shape.width / 2);
+  var rx = round(Math.max(4.2, Math.min(shape.width / 2 - 1.4, shape.width * 0.34)));
+  var rings = [];
+
+  for (var index = 0; index < 3; index += 1) {
+    var ring = Math.max(2, rx - index * 2.4);
+    rings.push(
+      <ellipse
+        className="lab-swirl__arc"
+        key={'swirl-' + index}
+        cx={cx}
+        cy={round(surface + 2 + index * 1.2)}
+        rx={round(ring)}
+        ry={round(Math.max(1.1, ring * 0.3))}
+        style={{ animationDelay: (index * 0.22).toFixed(2) + 's' }}
+      />
+    );
+  }
+
+  return (
+    <g clipPath={'url(#' + props.clipId + ')'} className="lab-swirl" aria-hidden="true">
+      {/* 涡心：液面被搅下去的那一圈凹面 */}
+      <ellipse
+        className="lab-swirl__dip"
+        cx={cx}
+        cy={round(surface + 1.4)}
+        rx={round(rx * 0.86)}
+        ry={round(Math.max(1.6, rx * 0.26))}
+      />
+      <g className="lab-swirl__spin">{rings}</g>
+    </g>
+  );
+}
+
+/*
  * 沉淀：按质量画成容器底部的弧形堆积，颜色取自物质表。
  * 堆体之外再撒几颗更小的颗粒（lab-solid-mote）：絮状沉淀一团一团的质感，
  * 而不是一块干净的色块；堆体高度也压得比液体浅，避免超过真实液面。
@@ -317,8 +228,13 @@ function SolidMarks(props) {
   var shape = props.shape;
   var centre = shape.x + shape.width / 2;
 
+  /* 搅拌时沉淀被涡流卷起来：整组悬浮打旋（lab-solid-group--swirl）。 */
   return (
-    <g clipPath={'url(#' + props.clipId + ')'} className="lab-solid-group" aria-hidden="true">
+    <g
+      clipPath={'url(#' + props.clipId + ')'}
+      className={'lab-solid-group' + (props.swirl ? ' lab-solid-group--swirl' : '')}
+      aria-hidden="true"
+    >
       {solids.map(function (entry, index) {
         var mass = entry.mass || 1;
         var color = entry.color || SOLID_COLORS[entry.chemical] || '#8e8b81';
@@ -470,7 +386,7 @@ function GlassMarks(props) {
       {shape.spoutArc ? <path className="lab-glass__spout-arc" d={shape.spoutArc} /> : null}
       {shape.wall ? <path className="lab-glass__wall" d={shape.wall} /> : null}
       {shape.edge ? <path className="lab-glass__edge" d={shape.edge} /> : null}
-      {shape.base ? <path className="lab-glass__base" d={shape.base} /> : null}
+      {shape.bottomArc ? <path className="lab-glass__base" d={shape.bottomArc} /> : null}
       {shape.highlight ? <path className="lab-glass__specular" d={shape.highlight} /> : null}
       {shape.highlightSoft ? (
         <path className="lab-glass__specular lab-glass__specular--soft" d={shape.highlightSoft} />
@@ -685,7 +601,12 @@ export function ContainerGraphic(props) {
   var height = liquidHeight(item, shape);
 
   return (
-    <svg className="lab-vessel__svg" viewBox="0 0 80 104" aria-hidden="true" focusable="false">
+    <svg
+      className="lab-vessel__svg"
+      viewBox={'0 0 ' + shape.size.width + ' ' + shape.size.height}
+      aria-hidden="true"
+      focusable="false"
+    >
       <GlassDefs prefix={prefix} shape={shape} />
 
       {/* 玻璃本体：半透明填充，让后面的液面隐约透出玻璃厚度 */}
@@ -700,6 +621,11 @@ export function ContainerGraphic(props) {
         prefix={prefix}
       />
 
+      {/* 搅拌中的涡流：液面凹面 + 打旋亮弧，压在液体上、气泡下 */}
+      {item.stirring && height > 0 ? (
+        <Swirl shape={shape} height={height} clipId={clipId} />
+      ) : null}
+
       {/* 放气或沸腾时从液面升起气泡；沸腾的气泡更多更密（lab-bubbles--boil）。 */}
       {item.gas || item.boiling ? (
         <Bubbles
@@ -710,7 +636,12 @@ export function ContainerGraphic(props) {
           count={item.boiling ? 9 : Math.min(10, 4 + (item.gasTimes || 0) * 2)}
         />
       ) : null}
-      <SolidMarks contents={item.contents} shape={shape} clipId={clipId} />
+      <SolidMarks
+        contents={item.contents}
+        shape={shape}
+        clipId={clipId}
+        swirl={!!item.stirring}
+      />
 
       {/* 纵向薄雾压在液体上：玻璃挡在前面，液体颜色略被提亮 */}
       <path className="lab-glass__veil" d={shape.body} fill={'url(#' + prefix + '-veil)'} />
